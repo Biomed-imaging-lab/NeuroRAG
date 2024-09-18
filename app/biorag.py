@@ -285,9 +285,7 @@ class BioRAG():
   def retrieve_node(self, state):
     question = state['question']
     generated_doc = state['generated_doc']
-    print('generated_doc', generated_doc)
     docs = self.retriever.invoke(generated_doc)
-    print('vs docs', docs)
     return {'question': question, 'documents': docs}
 
   def grade_documents_node(self, state):
