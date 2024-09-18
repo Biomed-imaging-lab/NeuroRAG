@@ -30,6 +30,12 @@ with st.sidebar:
     disabled=True,
   )
 
+  docs_col = st.sidebar.selectbox(
+    'Documents collection',
+    options=['Neurobiology'],
+    disabled=True,
+  )
+
 if 'messages' not in st.session_state:
   st.session_state['messages'] = [{'role': 'assistant', 'content': 'How can I help you?'}]
 
