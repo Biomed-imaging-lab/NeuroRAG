@@ -1,9 +1,2 @@
 .env
 .DS_Store
-
-.huggingface
-.embeddings_cache
-.docs_cache
-.ruff_cache
-
-research-rag/docs
