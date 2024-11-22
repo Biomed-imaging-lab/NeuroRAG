@@ -16,7 +16,7 @@ app = FastAPI()
 class Question(BaseModel):
   query: str
 
-@app.post("/invoke")
+@app.post('/invoke')
 async def invoke(question: Question):
   if not question.query.strip():
     raise HTTPException(status_code=400, detail='Question text cannot be empty.')
@@ -26,4 +26,4 @@ async def invoke(question: Question):
   except Exception as e:
     raise HTTPException(status_code=500, detail=str(e))
 
-  return {"answer": answer}
+  return {'answer': answer}
