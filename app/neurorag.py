@@ -1,28 +1,12 @@
-import os
 import re
-import nltk
-import string
-import numpy as np
-import pandas as pd
-from unidecode import unidecode
-from sklearn.metrics.pairwise import cosine_similarity
-from tqdm import tqdm
-from pathlib import Path
-import pickle
-from rouge_score import rouge_scorer
-import json
 import llm_blender
 from operator import itemgetter
 import operator
-from dotenv import load_dotenv
-from getpass import getpass
 from typing import List, Annotated
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
 
 from langchain.schema import Document
-from langchain_community.document_loaders import PDFMinerLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_mistralai.chat_models import ChatMistralAI
@@ -401,8 +385,8 @@ class NeuroRAG():
 
   def __build_rag_chain(self):
     blender = llm_blender.Blender()
-    blender.loadranker('llm-blender/PairRM', device='mps')
-    blender.loadfuser('llm-blender/gen_fuser_3b', device='mps')
+    blender.loadranker('llm-blender/PairRM', device='cuda')
+    blender.loadfuser('llm-blender/gen_fuser_3b', device='cuda')
 
     prompt = hub.pull('rlm/rag-prompt')
 
