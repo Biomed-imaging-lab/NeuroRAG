@@ -1,11 +1,14 @@
 import streamlit as st
 import pickle
-from biorag import BioRAG
+from neurorag import NeuroRAG
 import warnings
+from dotenv import load_dotenv
 
 warnings.filterwarnings('ignore')
 
-title = '🧠 BioRAG Chatbot'
+load_dotenv()
+
+title = '🧠 NeuroRAG Chatbot'
 
 st.set_page_config(page_title=title)
 
@@ -14,7 +17,7 @@ def load_docs():
     return pickle.load(f)
 
 docs = load_docs()
-app = BioRAG(docs)
+app = NeuroRAG(docs)
 app.compile()
 
 with st.sidebar:

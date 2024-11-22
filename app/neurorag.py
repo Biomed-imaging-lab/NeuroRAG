@@ -1,0 +1,677 @@
+import os
+import re
+import nltk
+import string
+import numpy as np
+import pandas as pd
+from unidecode import unidecode
+from sklearn.metrics.pairwise import cosine_similarity
+from tqdm import tqdm
+from pathlib import Path
+import pickle
+from rouge_score import rouge_scorer
+import json
+import llm_blender
+from operator import itemgetter
+import operator
+from dotenv import load_dotenv
+from getpass import getpass
+from typing import List, Annotated
+from typing_extensions import TypedDict
+from pydantic import BaseModel, Field
+
+from langchain.schema import Document
+from langchain_community.document_loaders import PDFMinerLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_chroma import Chroma
+from langchain_community.embeddings import OllamaEmbeddings
+from langchain_mistralai.chat_models import ChatMistralAI
+from langchain_openai import ChatOpenAI
+from langchain.embeddings.cache import CacheBackedEmbeddings
+from langchain.storage import LocalFileStore
+from langchain_community.llms import Ollama
+from langgraph.graph import START, END, StateGraph
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain.output_parsers import RetryOutputParser
+from typing import Literal
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnableLambda, RunnableParallel
+from langchain import hub
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_community.retrievers import PubMedRetriever, ArxivRetriever
+from langchain_community.tools.tavily_search import TavilySearchResults
+
+class RouteQuerySchema(BaseModel):
+  sources: List[str] = Field(
+    description='Given a user question select the retrieval methods you consider the most appropriate for addressing this question. You may also return an empty array if no methods are required.',
+  )
+
+class GradeDocumentsSchema(BaseModel):
+  binary_score: str = Field(description="Documents are relevant to the question, 'yes' or 'no'")
+
+class GradeHallucinationsSchema(BaseModel):
+  binary_score: str = Field(description="Answer is grounded in the facts, 'yes' or 'no'")
+
+class GradeAnswerSchema(BaseModel):
+  binary_score: str = Field(description="Answer addresses the question, 'yes' or 'no'")
+
+class DecompositionAnswerSchema(BaseModel):
+  subqueries: List[str] = Field(description="Given the original query, decompose it into 2-4 simpler sub-queries as json array of strings")
+
+class GraphStateSchema(TypedDict):
+  question: str
+
+  specialized_srcs: List[str]
+
+  step_back_query: str
+  rewritten_query: str
+  subqueries: List[str]
+
+  generated_docs: List[str]
+
+  documents: Annotated[list, operator.add]
+
+  web_search: str
+
+  generation: str
+  generations_num: int
+
+class NeuroRAG():
+  def __init__(self, docs=[], temperature=0):
+    self.docs = docs
+    self.temperature = temperature
+
+  def compile(self):
+    self.llm = Ollama(model='llama3.1', temperature=self.temperature)
+
+    embeddings = OllamaEmbeddings(model='llama3.1')
+    embeddings_store = LocalFileStore('./.embeddings_cache')
+    self.embeddings = CacheBackedEmbeddings.from_bytes_store(
+      embeddings,
+      embeddings_store,
+      namespace=embeddings.model,
+    )
+
+    self.vector_store = Chroma(
+      embedding_function=self.embeddings,
+      persist_directory='./chroma_db',
+    )
+    self.vector_store_retriever = self.vector_store.as_retriever()
+    self.pub_med_retriever = PubMedRetriever()
+    self.arxiv_retriever = ArxivRetriever(
+      load_max_docs=3,
+      get_ful_documents=True,
+    )
+
+    self.route_chain = self.__build_route_chain()
+    self.docs_grader_chain = self.__build_docs_grader_chain()
+    self.hallucinations_grader_chain = self.__build_hallucinations_grader_chain()
+    self.answer_grader_chain = self.__build_answer_grader_chain()
+    self.hyde_chain = self.__build_hyde_chain()
+    self.step_back_chain = self.__build_step_back_chain()
+    self.query_rewrite_chain = self.__build_query_rewrite_chain()
+    self.decomposition_chain = self.__build_decomposition_chain()
+    self.rag_chain = self.__build_rag_chain()
+    self.web_search_chain = self.__build_web_search_chain()
+
+    workflow = StateGraph(GraphStateSchema)
+
+    workflow.add_node(
+      'determine_specialized_srcs',
+      self.determine_specialized_src_node,
+    )
+    workflow.add_node(
+      'generate_step_back_query',
+      self.generate_step_back_query_node,
+    )
+    workflow.add_node(
+      'generate_rewritten_query',
+      self.generate_rewritten_query_node,
+    )
+    workflow.add_node(
+      'generate_subqueries',
+      self.generate_subqueries_node,
+    )
+    workflow.add_node('generate_hyde_docs', self.generate_hyde_docs_node)
+    workflow.add_node(
+      'vector_store_retriever',
+      self.vector_store_retriever_node,
+    )
+    workflow.add_node('pub_med_retriever', self.pub_med_retriever_node)
+    workflow.add_node('arxiv_retriever', self.arxiv_retriever_node)
+    workflow.add_node('websearch', self.web_search_node)
+    workflow.add_node('generate', self.generate_node)
+    workflow.add_node('grade_documents', self.grade_documents_node)
+
+    workflow.add_edge(START, 'determine_specialized_srcs')
+    workflow.add_conditional_edges(
+      'determine_specialized_srcs',
+      self.route_question_node,
+      {
+        'websearch': 'websearch',
+        'specialized_srcs': 'generate_step_back_query',
+      },
+    )
+    workflow.add_edge('generate_step_back_query', 'generate_rewritten_query')
+    workflow.add_edge('generate_rewritten_query', 'generate_subqueries')
+    workflow.add_edge('generate_subqueries', 'generate_hyde_docs')
+    workflow.add_edge('generate_hyde_docs', 'vector_store_retriever')
+    workflow.add_edge('generate_hyde_docs', 'pub_med_retriever')
+    workflow.add_edge('generate_hyde_docs', 'arxiv_retriever')
+    workflow.add_edge('vector_store_retriever', 'grade_documents')
+    workflow.add_edge('pub_med_retriever', 'grade_documents')
+    workflow.add_edge('arxiv_retriever', 'grade_documents')
+    workflow.add_conditional_edges(
+      'grade_documents',
+      self.decide_to_generate_node,
+      {
+        'websearch': 'websearch',
+        'generate': 'generate',
+      },
+    )
+    workflow.add_edge('websearch', 'generate')
+    workflow.add_conditional_edges(
+      'generate',
+      self.grade_generation_node,
+      {
+        'not supported': 'generate',
+        'useful': END,
+        'not useful': 'websearch',
+      },
+    )
+
+    self.app = workflow.compile()
+
+  def invoke(self, question):
+    result = self.app.invoke({'question': question})
+    return result['generation']
+
+  def extract_json_parser(self, response):
+    json_pattern = r'\{.*?\}'
+    match = re.search(json_pattern, response, re.DOTALL)
+
+    if match:
+      return match.group().strip()
+
+    return response
+
+  def __build_route_chain(self):
+    parser = PydanticOutputParser(pydantic_object=RouteQuerySchema)
+    retry_parser = RetryOutputParser.from_llm(
+      parser=parser,
+      llm=self.llm,
+      max_retries=3,
+    )
+    template = """
+    You are an expert at selecting retrieval methods.
+    Given a user question select the retrieval methods you consider the most appropriate for addressing user question.
+    You may also return an empty array if no methods are required.
+
+    Possible retrieval methods:
+    1. The "vectorstore" retriever contains documents related to neurobiology and medicine. Use the vectorstore for questions on these topics.
+    2. The "pubmed" retriever contains biomedical literature and research articles. It is particularly useful for answering detailed questions about medical research, clinical studies, and scientific discoveries.
+    3. The "arxiv" retriever contains preprints of research papers across various scientific fields, including physics, mathematics, computer science, and biology. Use the arxiv for questions on recent scientific research and theoretical studies in these areas.
+
+    {format_instructions}
+
+    User question:
+    {question}
+    """
+    prompt = PromptTemplate(
+      template=template,
+      input_variables=['question'],
+      partial_variables={'format_instructions': parser.get_format_instructions()},
+    )
+    chain = RunnableParallel(
+      completion=prompt | self.llm | self.extract_json_parser,
+      prompt_value=prompt,
+    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
+
+    return chain
+
+  def __build_docs_grader_chain(self):
+    parser = PydanticOutputParser(pydantic_object=GradeDocumentsSchema)
+    retry_parser = RetryOutputParser.from_llm(
+      parser=parser,
+      llm=self.llm,
+      max_retries=3,
+    )
+    template = """
+    You are a grader assessing relevance of a retrieved document to a user question.
+    If the document contains keyword(s) or semantic meaning related to the question, grade it as relevant.
+    Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question.
+
+    {format_instructions}
+
+    User question:
+    {question}
+
+    Retrieved document:
+    {document}
+    """
+    prompt = PromptTemplate(
+      template=template,
+      input_variables=['document', 'question'],
+      partial_variables={'format_instructions': parser.get_format_instructions()},
+    )
+    chain = RunnableParallel(
+      completion=prompt | self.llm | self.extract_json_parser,
+      prompt_value=prompt,
+    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
+
+    return chain
+
+  def __build_hallucinations_grader_chain(self):
+    parser = PydanticOutputParser(pydantic_object=GradeHallucinationsSchema)
+    retry_parser = RetryOutputParser.from_llm(
+      parser=parser,
+      llm=self.llm,
+      max_retries=3,
+    )
+    template = """
+    You are a grader assessing whether an LLM generation is grounded in / supported by a set of retrieved facts. \n
+    Give a binary score 'yes' or 'no'. 'Yes' means that the answer is grounded in / supported by the set of facts."
+
+    {format_instructions}
+
+    Set of facts:
+    {documents}
+
+    LLM generation:
+    {generation}
+    """
+    prompt = PromptTemplate(
+      template=template,
+      input_variables=['document', 'question'],
+      partial_variables={'format_instructions': parser.get_format_instructions()},
+    )
+    chain = RunnableParallel(
+      completion=prompt | self.llm | self.extract_json_parser,
+      prompt_value=prompt,
+    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
+
+    return chain
+
+  def __build_answer_grader_chain(self):
+    parser = PydanticOutputParser(pydantic_object=GradeAnswerSchema)
+    retry_parser = RetryOutputParser.from_llm(
+      parser=parser,
+      llm=self.llm,
+      max_retries=3,
+    )
+    template = """
+    You are a grader assessing whether an answer addresses / resolves a question. \n
+    Give a binary score 'yes' or 'no'. 'yes' means that the answer resolves the question.
+
+    {format_instructions}
+
+    User question:
+    {question}
+
+    LLM generation:
+    {generation}
+    """
+    prompt = PromptTemplate(
+      template=template,
+      input_variables=['document', 'question'],
+      partial_variables={'format_instructions': parser.get_format_instructions()},
+    )
+    chain = RunnableParallel(
+      completion=prompt | self.llm | self.extract_json_parser,
+      prompt_value=prompt,
+    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
+
+    return chain
+
+  def __build_hyde_chain(self):
+    template = """
+    Please write a scientific paper passage to answer the question
+
+    Question: {question}
+
+    Passage:
+    """
+    prompt = ChatPromptTemplate.from_template(template)
+    parser = StrOutputParser()
+    chain = prompt | self.llm | parser
+
+    return chain
+
+  def __build_step_back_chain(self):
+    template = """
+    You are an AI assistant tasked with generating broader, more general queries to improve context retrieval in a RAG system.
+    Given the original query, generate a step-back query that is more general and can help retrieve relevant background information.
+
+    Original query: {question}
+
+    Step-back query:
+    """
+    prompt = ChatPromptTemplate.from_template(template)
+    parser = StrOutputParser()
+    chain = prompt | self.llm | parser
+
+    return chain
+
+  def __build_query_rewrite_chain(self):
+    template = """
+    You are an AI assistant tasked with reformulating user queries to improve retrieval in a RAG system.
+    Given the original query, rewrite it to be more specific, detailed, and likely to retrieve relevant information.
+
+    Original query: {question}
+
+    Rewritten query:
+    """
+    prompt = ChatPromptTemplate.from_template(template)
+    parser = StrOutputParser()
+    chain = prompt | self.llm | parser
+
+    return chain
+
+  def __build_decomposition_chain(self):
+    parser = PydanticOutputParser(pydantic_object=DecompositionAnswerSchema)
+    retry_parser = RetryOutputParser.from_llm(
+      parser=parser,
+      llm=self.llm,
+      max_retries=3,
+    )
+    template = """
+    You are a grader assessing whether an answer addresses / resolves a question. \n
+    Give a binary score 'yes' or 'no'. 'yes' means that the answer resolves the question.
+
+    {format_instructions}
+
+    User question:
+    {question}
+
+    LLM generation:
+    {generation}
+    """
+    prompt = PromptTemplate(
+      template=template,
+      input_variables=['question'],
+      partial_variables={'format_instructions': parser.get_format_instructions()},
+    )
+    chain = RunnableParallel(
+      completion=prompt | self.llm | self.extract_json_parser,
+      prompt_value=prompt,
+    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
+
+    return chain
+
+  def __build_rag_chain(self):
+    blender = llm_blender.Blender()
+    blender.loadranker('llm-blender/PairRM', device='mps')
+    blender.loadfuser('llm-blender/gen_fuser_3b', device='mps')
+
+    prompt = hub.pull('rlm/rag-prompt')
+
+    llama_llm = Ollama(model='llama3.1', temperature=0)
+    mistral_llm = ChatMistralAI(model='mistral-large-latest', temperature=0)
+    gpt_llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
+
+    llama_chain = prompt | llama_llm | StrOutputParser()
+    mistral_chain = prompt | mistral_llm | StrOutputParser()
+    gpt_chain = prompt | gpt_llm | StrOutputParser()
+
+    def fuse_generations(dict):
+      question = dict['question']
+
+      llama_res = dict['llama_res']
+      mistral_res = dict['mistral_res']
+      gpt_res = dict['gpt_res']
+      answers = [llama_res, mistral_res, gpt_res]
+
+      fuse_generations, ranks = blender.rank_and_fuse(
+        [question],
+        [answers],
+        instructions=[''],
+        return_scores=False,
+        batch_size=2,
+        top_k=3
+      )
+      return fuse_generations[0]
+
+
+    chain = (
+      {
+        'llama_res': llama_chain,
+        'mistral_res': mistral_chain,
+        'gpt_res': gpt_chain,
+        'question': itemgetter('question')
+      }
+      | RunnableLambda(fuse_generations)
+    )
+
+    return chain
+
+  def __build_web_search_chain(self):
+    chain = TavilySearchResults(k=5)
+
+    return chain
+
+  def determine_specialized_src_node(self, state):
+    question = state['question']
+    res = self.route_chain.invoke({'question': question})
+    srcs = [src.strip().lower() for src in res.sources]
+
+    return {'specialized_srcs': srcs}
+
+  def route_question_node(self, state):
+    sources = state['specialized_srcs']
+    return 'websearch' if len(sources) == 0 else 'specialized_srcs'
+
+  def generate_step_back_query_node(self, state):
+    question = state['question']
+    step_back_query = self.step_back_chain.invoke({'question': question})
+    return {'step_back_query': step_back_query}
+
+  def generate_rewritten_query_node(self, state):
+    question = state['question']
+    rewritten_query = self.query_rewrite_chain.invoke({'question': question})
+    return {'rewritten_query': rewritten_query}
+
+  def generate_subqueries_node(self, state):
+    question = state['question']
+
+    try:
+      decomposition_answer = self.decomposition_chain.invoke({'question': question})
+      subqueries = decomposition_answer.subqueries
+      # Limit to a maximum of four subqueries
+      subqueries = subqueries[:4]
+    except:
+      subqueries = []
+
+    return {'subqueries': subqueries}
+
+  def generate_hyde_docs_node(self, state):
+    question = state['question']
+    step_back_query = state['step_back_query']
+    rewritten_query = state['rewritten_query']
+    subqueries = state['subqueries']
+
+    queries = [question, step_back_query, rewritten_query, *subqueries]
+    generated_docs = []
+
+    for query in queries:
+      generated_doc = self.hyde_chain.invoke({'question': query})
+      generated_docs.append(generated_doc)
+
+    return {'question': question, 'generated_docs': generated_docs}
+
+  def vector_store_retriever_node(self, state):
+    generated_docs = state['generated_docs']
+    specialized_srcs = state['specialized_srcs']
+
+    if 'vectorstore' not in specialized_srcs:
+      return {'documents': []}
+
+    documents = []
+
+    for generated_doc in generated_docs:
+      documents.extend(self.vector_store_retriever.invoke(generated_doc))
+
+    unique_documents = []
+    seen_contents = set()
+
+    for document in documents:
+      if document.page_content in seen_contents:
+        continue
+
+      unique_documents.append(document)
+      seen_contents.add(document.page_content)
+
+    return {'documents': unique_documents}
+
+  def pub_med_retriever_node(self, state):
+    generated_docs = state['generated_docs']
+    specialized_srcs = state['specialized_srcs']
+
+    if 'pubmed' not in specialized_srcs:
+      return {'documents': []}
+
+    documents = []
+
+    for generated_doc in generated_docs:
+      try:
+        documents.extend(self.pub_med_retriever.invoke(generated_doc))
+      except:
+        pass
+
+    unique_documents = []
+    seen_contents = set()
+
+    for document in documents:
+      if document.page_content in seen_contents:
+        continue
+
+      unique_documents.append(document)
+      seen_contents.add(document.page_content)
+
+    return {'documents': unique_documents}
+
+  def arxiv_retriever_node(self, state):
+    generated_docs = state['generated_docs']
+    specialized_srcs = state['specialized_srcs']
+
+    if 'arxiv' not in specialized_srcs:
+      return {'documents': []}
+
+    documents = []
+
+    for generated_doc in generated_docs:
+      try:
+        documents.extend(self.arxiv_retriever.invoke(generated_doc))
+      except:
+        pass
+
+    unique_documents = []
+    seen_contents = set()
+
+    for document in documents:
+      if document.page_content in seen_contents:
+        continue
+
+      unique_documents.append(document)
+      seen_contents.add(document.page_content)
+
+    return {'documents': unique_documents}
+
+  def grade_documents_node(self, state):
+    question = state['question']
+    documents = state['documents']
+
+    filtered_docs = []
+    web_search = 'No'
+
+    for doc in documents:
+      try:
+        score = self.docs_grader_chain.invoke({'question': question, 'document': doc.page_content})
+        grade = score.binary_score.lower()
+      except:
+        grade = 'no'
+
+      if grade == 'yes':
+        filtered_docs.append(doc)
+      else:
+        web_search = 'Yes'
+        continue
+
+    return {
+      'question': question,
+      'documents': filtered_docs,
+      'web_search': web_search,
+    }
+
+  def decide_to_generate_node(self, state):
+    web_search = state['web_search']
+    return 'websearch' if web_search == 'Yes' else 'generate'
+
+  def web_search_node(self, state):
+    question = state['question']
+    documents = state.get('documents')
+
+    try:
+      docs = self.web_search_chain.invoke({'query': question})
+      web_results = '\n'.join([d['content'] for d in docs])
+      web_results = Document(page_content=web_results)
+
+      if documents is not None:
+        documents.append(web_results)
+      else:
+        documents = [web_results]
+    except:
+      pass
+
+    return {
+      'question': question,
+      'documents': documents,
+    }
+
+  def generate_node(self, state):
+    question = state['question']
+    documents = state['documents']
+    generations_num = state.get('generations_num', 0) or 0
+
+    generation = self.rag_chain.invoke({'context': documents, 'question': question})
+
+    return {
+      'question': question,
+      'documents': documents,
+      'generation': generation,
+      'generations_num': generations_num + 1,
+    }
+
+  def grade_generation_node(self, state):
+    question = state['question']
+    documents = state['documents']
+    generation = state['generation']
+    generations_num = state['generations_num']
+
+    if generations_num >= 2:
+      return 'useful'
+
+    try:
+      score = self.hallucinations_grader_chain.invoke({
+        'documents': documents,
+        'generation': generation,
+      })
+      grade = score.binary_score
+    except:
+      grade = 'no'
+
+    if grade == 'yes':
+      try:
+        score = self.answer_grader_chain.invoke({
+          'question': question,
+          'generation': generation,
+        })
+        grade = score.binary_score.lower()
+      except:
+        grade = 'no'
+
+      return 'useful' if grade == 'yes' else 'not useful'
+    else:
+      return 'not supported'
+
+
