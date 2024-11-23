@@ -416,7 +416,6 @@ class NeuroRAG():
       )
       return fuse_generations[0]
 
-
     chain = (
       {
         'llama_res': llama_chain,
