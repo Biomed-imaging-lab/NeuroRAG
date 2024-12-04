@@ -51,5 +51,6 @@ if prompt := st.chat_input():
 
   with st.spinner('Thinking...'):
     response = app.invoke(prompt)
-    st.session_state.messages.append({'role': 'assistant', 'content': response})
-    st.chat_message('assistant').write(response)
+    content = response['generation']
+    st.session_state.messages.append({'role': 'assistant', 'content': content})
+    st.chat_message('assistant').write(content)

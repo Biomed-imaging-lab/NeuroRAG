@@ -5,6 +5,7 @@ import operator
 from typing import List, Annotated
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
+from NCBIProteinRetriever import NCBIProteinRetriever
 
 from langchain.schema import Document
 from langchain_chroma import Chroma
@@ -42,6 +43,9 @@ class GradeAnswerSchema(BaseModel):
 
 class DecompositionAnswerSchema(BaseModel):
   subqueries: List[str] = Field(description="Given the original query, decompose it into 2-4 simpler sub-queries as json array of strings")
+
+class NCBIProteinDBAnswerSchema(BaseModel):
+  query: str = Field(description='Given the original query, please find a protein locus for the NCBI protein database.')
 
 class GraphStateSchema(TypedDict):
   question: str
@@ -87,6 +91,7 @@ class NeuroRAG():
       load_max_docs=3,
       get_ful_documents=True,
     )
+    self.ncbi_protein_retriever = NCBIProteinRetriever(k=3)
 
     self.route_chain = self.__build_route_chain()
     self.docs_grader_chain = self.__build_docs_grader_chain()
@@ -96,6 +101,7 @@ class NeuroRAG():
     self.step_back_chain = self.__build_step_back_chain()
     self.query_rewrite_chain = self.__build_query_rewrite_chain()
     self.decomposition_chain = self.__build_decomposition_chain()
+    self.ncbi_protein_db_chain = self.__build_ncbi_protein_db_chain()
     self.rag_chain = self.__build_rag_chain()
     self.web_search_chain = self.__build_web_search_chain()
 
@@ -124,6 +130,7 @@ class NeuroRAG():
     )
     workflow.add_node('pub_med_retriever', self.pub_med_retriever_node)
     workflow.add_node('arxiv_retriever', self.arxiv_retriever_node)
+    workflow.add_node('ncbi_protein_db_retriever', self.ncbi_protein_db_retriever_node)
     workflow.add_node('websearch', self.web_search_node)
     workflow.add_node('generate', self.generate_node)
     workflow.add_node('grade_documents', self.grade_documents_node)
@@ -143,9 +150,11 @@ class NeuroRAG():
     workflow.add_edge('generate_hyde_docs', 'vector_store_retriever')
     workflow.add_edge('generate_hyde_docs', 'pub_med_retriever')
     workflow.add_edge('generate_hyde_docs', 'arxiv_retriever')
+    workflow.add_edge('generate_hyde_docs', 'ncbi_protein_db_retriever')
     workflow.add_edge('vector_store_retriever', 'grade_documents')
     workflow.add_edge('pub_med_retriever', 'grade_documents')
     workflow.add_edge('arxiv_retriever', 'grade_documents')
+    workflow.add_edge('ncbi_protein_db_retriever', 'grade_documents')
     workflow.add_conditional_edges(
       'grade_documents',
       self.decide_to_generate_node,
@@ -169,7 +178,7 @@ class NeuroRAG():
 
   def invoke(self, question):
     result = self.app.invoke({'question': question})
-    return result['generation']
+    return result
 
   def extract_json_parser(self, response):
     json_pattern = r'\{.*?\}'
@@ -188,19 +197,20 @@ class NeuroRAG():
       max_retries=3,
     )
     template = """
-    You are an expert at selecting retrieval methods.
-    Given a user question select the retrieval methods you consider the most appropriate for addressing user question.
-    You may also return an empty array if no methods are required.
+You are an expert at selecting retrieval methods.
+Given a user question select the retrieval methods you consider the most appropriate for addressing user question.
+You may also return an empty array if no methods are required.
 
-    Possible retrieval methods:
-    1. The "vectorstore" retriever contains documents related to neurobiology and medicine. Use the vectorstore for questions on these topics.
-    2. The "pubmed" retriever contains biomedical literature and research articles. It is particularly useful for answering detailed questions about medical research, clinical studies, and scientific discoveries.
-    3. The "arxiv" retriever contains preprints of research papers across various scientific fields, including physics, mathematics, computer science, and biology. Use the arxiv for questions on recent scientific research and theoretical studies in these areas.
+Possible retrieval methods:
+1. The "vectorstore" retriever contains documents related to neurobiology and medicine. Use the vectorstore for questions on these topics.
+2. The "pubmed" retriever contains biomedical literature and research articles. It is particularly useful for answering detailed questions about medical research, clinical studies, and scientific discoveries.
+3. The "arxiv" retriever contains preprints of research papers across various scientific fields, including physics, mathematics, computer science, and biology. Use the arxiv for questions on recent scientific research and theoretical studies in these areas.
+4. The "ncbi_protein" retriever contains protein sequence and functional information. Use the NCBI protein DB for questions related to protein sequences, structures, and functions.
 
-    {format_instructions}
+{format_instructions}
 
-    User question:
-    {question}
+User question:
+{question}
     """
     prompt = PromptTemplate(
       template=template,
@@ -222,17 +232,17 @@ class NeuroRAG():
       max_retries=3,
     )
     template = """
-    You are a grader assessing relevance of a retrieved document to a user question.
-    If the document contains keyword(s) or semantic meaning related to the question, grade it as relevant.
-    Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question.
+You are a grader assessing relevance of a retrieved document to a user question.
+If the document contains keyword(s) or semantic meaning related to the question, grade it as relevant.
+Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question.
 
-    {format_instructions}
+{format_instructions}
 
-    User question:
-    {question}
+User question:
+{question}
 
-    Retrieved document:
-    {document}
+Retrieved document:
+{document}
     """
     prompt = PromptTemplate(
       template=template,
@@ -254,16 +264,16 @@ class NeuroRAG():
       max_retries=3,
     )
     template = """
-    You are a grader assessing whether an LLM generation is grounded in / supported by a set of retrieved facts. \n
-    Give a binary score 'yes' or 'no'. 'Yes' means that the answer is grounded in / supported by the set of facts."
+You are a grader assessing whether an LLM generation is grounded in / supported by a set of retrieved facts. \n
+Give a binary score 'yes' or 'no'. 'Yes' means that the answer is grounded in / supported by the set of facts."
 
-    {format_instructions}
+{format_instructions}
 
-    Set of facts:
-    {documents}
+Set of facts:
+{documents}
 
-    LLM generation:
-    {generation}
+LLM generation:
+{generation}
     """
     prompt = PromptTemplate(
       template=template,
@@ -285,16 +295,16 @@ class NeuroRAG():
       max_retries=3,
     )
     template = """
-    You are a grader assessing whether an answer addresses / resolves a question. \n
-    Give a binary score 'yes' or 'no'. 'yes' means that the answer resolves the question.
+You are a grader assessing whether an answer addresses / resolves a question. \n
+Give a binary score 'yes' or 'no'. 'yes' means that the answer resolves the question.
 
-    {format_instructions}
+{format_instructions}
 
-    User question:
-    {question}
+User question:
+{question}
 
-    LLM generation:
-    {generation}
+LLM generation:
+{generation}
     """
     prompt = PromptTemplate(
       template=template,
@@ -310,11 +320,11 @@ class NeuroRAG():
 
   def __build_hyde_chain(self):
     template = """
-    Please write a scientific paper passage to answer the question
+Please write a scientific paper passage to answer the question
 
-    Question: {question}
+Question: {question}
 
-    Passage:
+Passage:
     """
     prompt = ChatPromptTemplate.from_template(template)
     parser = StrOutputParser()
@@ -324,12 +334,12 @@ class NeuroRAG():
 
   def __build_step_back_chain(self):
     template = """
-    You are an AI assistant tasked with generating broader, more general queries to improve context retrieval in a RAG system.
-    Given the original query, generate a step-back query that is more general and can help retrieve relevant background information.
+You are an AI assistant tasked with generating broader, more general queries to improve context retrieval in a RAG system.
+Given the original query, generate a step-back query that is more general and can help retrieve relevant background information.
 
-    Original query: {question}
+Original query: {question}
 
-    Step-back query:
+Step-back query:
     """
     prompt = ChatPromptTemplate.from_template(template)
     parser = StrOutputParser()
@@ -339,12 +349,12 @@ class NeuroRAG():
 
   def __build_query_rewrite_chain(self):
     template = """
-    You are an AI assistant tasked with reformulating user queries to improve retrieval in a RAG system.
-    Given the original query, rewrite it to be more specific, detailed, and likely to retrieve relevant information.
+You are an AI assistant tasked with reformulating user queries to improve retrieval in a RAG system.
+Given the original query, rewrite it to be more specific, detailed, and likely to retrieve relevant information.
 
-    Original query: {question}
+Original query: {question}
 
-    Rewritten query:
+Rewritten query:
     """
     prompt = ChatPromptTemplate.from_template(template)
     parser = StrOutputParser()
@@ -360,16 +370,20 @@ class NeuroRAG():
       max_retries=3,
     )
     template = """
-    You are a grader assessing whether an answer addresses / resolves a question. \n
-    Give a binary score 'yes' or 'no'. 'yes' means that the answer resolves the question.
+You are an AI assistant tasked with breaking down complex queries into simpler sub-queries for a RAG system.
+Given the original query, decompose it into 2-4 simpler sub-queries that, when answered together, would provide a comprehensive response to the original query.
 
-    {format_instructions}
+Original query: {question}
 
-    User question:
-    {question}
+example: What are the impacts of climate change on the environment?
 
-    LLM generation:
-    {generation}
+Sub-queries:
+1. What are the impacts of climate change on biodiversity?
+2. How does climate change affect the oceans?
+3. What are the effects of climate change on agriculture?
+4. What are the impacts of climate change on human health?
+
+{format_instructions}
     """
     prompt = PromptTemplate(
       template=template,
@@ -380,6 +394,37 @@ class NeuroRAG():
       completion=prompt | self.llm | self.extract_json_parser,
       prompt_value=prompt,
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
+
+    return chain
+
+  def __build_ncbi_protein_db_chain(self):
+    parser = PydanticOutputParser(pydantic_object=NCBIProteinDBAnswerSchema)
+    retry_parser = RetryOutputParser.from_llm(
+      parser=parser,
+      llm=self.llm,
+      max_retries=3,
+    )
+
+    template = """
+As an expert in bioinformatics and user query optimization for biological databases, your task is to transform user questions into precise and effective queries suitable for the NCBI protein database.
+Create a query with only locus of a protein for search within the NCBI protein database.
+
+Original query: {question}
+
+{format_instructions}
+    """
+    prompt = PromptTemplate(
+      template=template,
+      input_variables=['question'],
+      partial_variables={'format_instructions': parser.get_format_instructions()},
+    )
+
+    query_extractor = lambda res: res.query
+
+    chain = RunnableParallel(
+      completion=prompt | self.llm | self.extract_json_parser,
+      prompt_value=prompt
+    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x)) | query_extractor | self.ncbi_protein_retriever
 
     return chain
 
@@ -434,27 +479,47 @@ class NeuroRAG():
     return chain
 
   def determine_specialized_src_node(self, state):
+    print('---DETERMINE SPECIALIZED SOURCES---')
+
     question = state['question']
-    res = self.route_chain.invoke({'question': question})
-    srcs = [src.strip().lower() for src in res.sources]
+
+    try:
+      res = self.route_chain.invoke({'question': question})
+      srcs = [src.strip().lower() for src in res.sources]
+    except:
+      srcs = []
 
     return {'specialized_srcs': srcs}
 
   def route_question_node(self, state):
+    print('---ROUTE QUESTION---')
+
     sources = state['specialized_srcs']
-    return 'websearch' if len(sources) == 0 else 'specialized_srcs'
+
+    if len(sources) == 0:
+      print('---ROUTE QUESTION TO WEB SEARCH---')
+      return 'websearch'
+    else:
+      print(f'---ROUTE QUESTION TO SPECIALIZED SOURCES: {", ".join([source.upper() for source in sources])}---')
+      return 'specialized_srcs'
 
   def generate_step_back_query_node(self, state):
+    print('---GENERATE STEP-BACK QUERY---')
+
     question = state['question']
     step_back_query = self.step_back_chain.invoke({'question': question})
     return {'step_back_query': step_back_query}
 
   def generate_rewritten_query_node(self, state):
+    print('---GENERATE REWRITTEN QUERY---')
+
     question = state['question']
     rewritten_query = self.query_rewrite_chain.invoke({'question': question})
     return {'rewritten_query': rewritten_query}
 
   def generate_subqueries_node(self, state):
+    print('---GENERATE SUBQUERIES---')
+
     question = state['question']
 
     try:
@@ -465,9 +530,13 @@ class NeuroRAG():
     except:
       subqueries = []
 
+    print(f'---FINAL SUBQUERIES NUMBER: {len(subqueries)}---')
+
     return {'subqueries': subqueries}
 
   def generate_hyde_docs_node(self, state):
+    print('---GENERATE HYDE DOCUMENTS---')
+
     question = state['question']
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
@@ -489,22 +558,14 @@ class NeuroRAG():
     if 'vectorstore' not in specialized_srcs:
       return {'documents': []}
 
+    print('---RETRIEVE FROM VECTOR STORE---')
+
     documents = []
 
     for generated_doc in generated_docs:
       documents.extend(self.vector_store_retriever.invoke(generated_doc))
 
-    unique_documents = []
-    seen_contents = set()
-
-    for document in documents:
-      if document.page_content in seen_contents:
-        continue
-
-      unique_documents.append(document)
-      seen_contents.add(document.page_content)
-
-    return {'documents': unique_documents}
+    return {'documents': documents}
 
   def pub_med_retriever_node(self, state):
     generated_docs = state['generated_docs']
@@ -512,6 +573,8 @@ class NeuroRAG():
 
     if 'pubmed' not in specialized_srcs:
       return {'documents': []}
+
+    print('---RETRIEVE FROM PUBMED---')
 
     documents = []
 
@@ -521,17 +584,7 @@ class NeuroRAG():
       except:
         pass
 
-    unique_documents = []
-    seen_contents = set()
-
-    for document in documents:
-      if document.page_content in seen_contents:
-        continue
-
-      unique_documents.append(document)
-      seen_contents.add(document.page_content)
-
-    return {'documents': unique_documents}
+    return {'documents': documents}
 
   def arxiv_retriever_node(self, state):
     generated_docs = state['generated_docs']
@@ -539,6 +592,8 @@ class NeuroRAG():
 
     if 'arxiv' not in specialized_srcs:
       return {'documents': []}
+
+    print('---RETRIEVE FROM ARXIV---')
 
     documents = []
 
@@ -548,41 +603,77 @@ class NeuroRAG():
       except:
         pass
 
-    unique_documents = []
-    seen_contents = set()
+    return {'documents': documents}
 
-    for document in documents:
-      if document.page_content in seen_contents:
-        continue
+  def ncbi_protein_db_retriever_node(self, state):
+    specialized_srcs = state['specialized_srcs']
 
-      unique_documents.append(document)
-      seen_contents.add(document.page_content)
+    if 'ncbi_protein' not in specialized_srcs:
+      return {'documents': []}
 
-    return {'documents': unique_documents}
+    print('---RETRIEVE FROM NCBI PROTEIN DB---')
+
+    question = state['question']
+    step_back_query = state['step_back_query']
+    rewritten_query = state['rewritten_query']
+    subqueries = state['subqueries']
+
+    queries = [question, step_back_query, rewritten_query, *subqueries]
+    documents = []
+
+    for query in queries:
+      try:
+        documents.extend(self.ncbi_protein_db_chain.invoke(query))
+      except:
+        pass
+
+    print(documents)
+
+    return {'documents': documents}
 
   def grade_documents_node(self, state):
+    print('---CHECK DOCUMENT RELEVANCE TO QUESTION---')
+
     question = state['question']
     documents = state['documents']
 
-    filtered_docs = []
+    print(f'---INITIAL DOCUMENTS NUMBER: {len(documents)}---')
+
+    filtered_documents = []
+    seen_contents = set()
     web_search = 'No'
 
-    for doc in documents:
+    for index, document in enumerate(documents):
+      print(f'---GRADE DOCUMENT ({index + 1}/{len(documents)})---')
+
+      if document.page_content in seen_contents:
+        print('---GRADE: DOCUMENT IS REPEATED---')
+        continue
+      seen_contents.add(document.page_content)
+
       try:
-        score = self.docs_grader_chain.invoke({'question': question, 'document': doc.page_content})
-        grade = score.binary_score.lower()
+        score = self.docs_grader_chain.invoke({
+          'question': question,
+          'document': document.page_content,
+        })
+        print(score)
+        grade = score.binary_score
       except:
         grade = 'no'
 
-      if grade == 'yes':
-        filtered_docs.append(doc)
+      if grade.lower() == 'yes':
+        print('---GRADE: DOCUMENT RELEVANT---')
+        filtered_documents.append(document)
       else:
+        print('---GRADE: DOCUMENT NOT RELEVANT---')
         web_search = 'Yes'
         continue
 
+    print(f'---FINAL DOCUMENTS NUMBER: {len(filtered_documents)}---')
+
+    state['documents'].clear()
     return {
-      'question': question,
-      'documents': filtered_docs,
+      'documents': filtered_documents,
       'web_search': web_search,
     }
 
@@ -591,41 +682,31 @@ class NeuroRAG():
     return 'websearch' if web_search == 'Yes' else 'generate'
 
   def web_search_node(self, state):
+    print('---WEB SEARCH---')
+
     question = state['question']
-    documents = state.get('documents')
 
-    try:
-      docs = self.web_search_chain.invoke({'query': question})
-      web_results = '\n'.join([d['content'] for d in docs])
-      web_results = Document(page_content=web_results)
+    docs = self.web_search_chain.invoke({'query': question})
+    web_results = '\n'.join([d['content'] for d in docs])
+    web_results = Document(page_content=web_results)
 
-      if documents is not None:
-        documents.append(web_results)
-      else:
-        documents = [web_results]
-    except:
-      pass
-
-    return {
-      'question': question,
-      'documents': documents,
-    }
+    return {'documents': [web_results]}
 
   def generate_node(self, state):
+    print('---GENERATE---')
+
     question = state['question']
     documents = state['documents']
-    generations_num = state.get('generations_num', 0) or 0
+    generations_num = state.get('generations_num', 0)
 
-    generation = self.rag_chain.invoke({'context': documents, 'question': question})
+    context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
+    generation = self.rag_chain.invoke({'context': context, 'question': question})
 
-    return {
-      'question': question,
-      'documents': documents,
-      'generation': generation,
-      'generations_num': generations_num + 1,
-    }
+    return {'generation': generation, 'generations_num': generations_num + 1}
 
   def grade_generation_node(self, state):
+    print('---CHECK HALLUCINATIONS---')
+
     question = state['question']
     documents = state['documents']
     generation = state['generation']
@@ -635,8 +716,9 @@ class NeuroRAG():
       return 'useful'
 
     try:
+      context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
       score = self.hallucinations_grader_chain.invoke({
-        'documents': documents,
+        'documents': context,
         'generation': generation,
       })
       grade = score.binary_score
@@ -644,6 +726,9 @@ class NeuroRAG():
       grade = 'no'
 
     if grade == 'yes':
+      print('---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---')
+      print('---GRADE GENERATION vs QUESTION---')
+
       try:
         score = self.answer_grader_chain.invoke({
           'question': question,
@@ -653,8 +738,12 @@ class NeuroRAG():
       except:
         grade = 'no'
 
-      return 'useful' if grade == 'yes' else 'not useful'
+      if grade == 'yes':
+        print('---DECISION: GENERATION ADDRESSES QUESTION---')
+        return 'useful'
+      else:
+        print('---DECISION: GENERATION DOES NOT ADDRESS QUESTION---')
+        return 'not useful'
     else:
+      print('---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---')
       return 'not supported'
-
-
