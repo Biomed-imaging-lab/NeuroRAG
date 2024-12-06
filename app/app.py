@@ -5,20 +5,18 @@ import warnings
 from dotenv import load_dotenv
 
 warnings.filterwarnings('ignore')
-
 load_dotenv()
-
-title = '🧠 NeuroRAG Chatbot'
-
-st.set_page_config(page_title=title)
 
 def load_docs():
   with open('splitted_docs.pkl', 'rb') as f:
     return pickle.load(f)
-
 docs = load_docs()
 app = NeuroRAG(docs)
 app.compile()
+
+title = '🧠 NeuroRAG Chatbot'
+
+st.set_page_config(page_title=title)
 
 with st.sidebar:
   st.title(title)
