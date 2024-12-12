@@ -48,6 +48,6 @@ if prompt := st.chat_input():
     content = response['generation']
     documents = response['documents']
     sources = [document.metadata['source'] for document in documents]
-    content += '\n\nSources:' + '\n'.join(sources)
+    content += '\n\nSources:\n' + '\n'.join(map(lambda src: f'- {src}', sources))
     st.session_state.messages.append({'role': 'assistant', 'content': content})
     st.chat_message('assistant').write(content)

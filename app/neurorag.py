@@ -77,11 +77,11 @@ class NeuroRAG():
     self.embeddings = CacheBackedEmbeddings.from_bytes_store(
       embeddings,
       embeddings_store,
-      collection_name='neurorag',
       namespace=embeddings.model,
     )
 
     self.vector_store = Chroma(
+      collection_name='neurorag',
       embedding_function=self.embeddings,
       persist_directory='./chroma_db',
     )
@@ -627,8 +627,6 @@ Original query: {question}
       except:
         pass
 
-    print(documents)
-
     return {'documents': documents}
 
   def grade_documents_node(self, state):
@@ -656,7 +654,6 @@ Original query: {question}
           'question': question,
           'document': document.page_content,
         })
-        print(score)
         grade = score.binary_score
       except:
         grade = 'no'
@@ -686,11 +683,10 @@ Original query: {question}
 
     question = state['question']
 
-    docs = self.web_search_chain.invoke({'query': question})
-    web_results = '\n'.join([d['content'] for d in docs])
-    web_results = Document(page_content=web_results)
+    web_results = self.web_search_chain.invoke({'query': question})
+    docs = [Document(page_content=result['content'], metadata={'source': result['url']}) for result in web_results]
 
-    return {'documents': [web_results]}
+    return {'documents': docs}
 
   def generate_node(self, state):
     print('---GENERATE---')

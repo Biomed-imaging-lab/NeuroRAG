@@ -48,7 +48,8 @@ class NCBIProteinRetriever(BaseRetriever):
         f'Comment: {comment}\n'
         f'Sequence: {protein_record.seq}'
       )
-      doc = Document(page_content=page_content)
+      source = f'https://www.ncbi.nlm.nih.gov/protein/{protein_record.name}'
+      doc = Document(page_content=page_content, metadata={'source': source})
       docs.append(doc)
 
     return docs
