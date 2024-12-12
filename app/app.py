@@ -7,11 +7,7 @@ from dotenv import load_dotenv
 warnings.filterwarnings('ignore')
 load_dotenv()
 
-def load_docs():
-  with open('splitted_docs.pkl', 'rb') as f:
-    return pickle.load(f)
-docs = load_docs()
-app = NeuroRAG(docs)
+app = NeuroRAG()
 app.compile()
 
 title = '🧠 NeuroRAG Chatbot'
@@ -50,5 +46,8 @@ if prompt := st.chat_input():
   with st.spinner('Thinking...'):
     response = app.invoke(prompt)
     content = response['generation']
+    documents = response['documents']
+    sources = [document.metadata['source'] for document in documents]
+    content += '\n\nSources:' + '\n'.join(sources)
     st.session_state.messages.append({'role': 'assistant', 'content': content})
     st.chat_message('assistant').write(content)

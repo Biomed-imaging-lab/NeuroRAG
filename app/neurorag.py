@@ -66,8 +66,7 @@ class GraphStateSchema(TypedDict):
   generations_num: int
 
 class NeuroRAG():
-  def __init__(self, docs=[], temperature=0):
-    self.docs = docs
+  def __init__(self, temperature=0):
     self.temperature = temperature
 
   def compile(self):
@@ -78,6 +77,7 @@ class NeuroRAG():
     self.embeddings = CacheBackedEmbeddings.from_bytes_store(
       embeddings,
       embeddings_store,
+      collection_name='neurorag',
       namespace=embeddings.model,
     )
 
