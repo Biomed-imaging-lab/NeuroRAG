@@ -430,26 +430,26 @@ Original query: {question}
 
   def __build_rag_chain(self):
     blender = llm_blender.Blender()
-    blender.loadranker('llm-blender/PairRM', device='cuda')
-    blender.loadfuser('llm-blender/gen_fuser_3b', device='cuda')
+    blender.loadranker('llm-blender/PairRM', device='mps')
+    blender.loadfuser('llm-blender/gen_fuser_3b', device='mps')
 
     prompt = hub.pull('rlm/rag-prompt')
 
-    llama_llm = Ollama(model='llama3.1', temperature=0)
-    mistral_llm = ChatMistralAI(model='mistral-large-latest', temperature=0)
     gpt_llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
+    openbio_llm = Ollama(model='taozhiyuai/openbiollm-llama-3:70b_q2_k', temperature=0)
+    biomistral_llm = Ollama(model='cniongolo/biomistral', temperature=0)
 
-    llama_chain = prompt | llama_llm | StrOutputParser()
-    mistral_chain = prompt | mistral_llm | StrOutputParser()
     gpt_chain = prompt | gpt_llm | StrOutputParser()
+    openbio_chain = prompt | openbio_llm | StrOutputParser()
+    biomistral_chain = prompt | biomistral_llm | StrOutputParser()
 
     def fuse_generations(dict):
       question = dict['question']
 
-      llama_res = dict['llama_res']
-      mistral_res = dict['mistral_res']
       gpt_res = dict['gpt_res']
-      answers = [llama_res, mistral_res, gpt_res]
+      openbio_res = dict['openbio_res']
+      biomistral_res = dict['biomistral_res']
+      answers = [gpt_res, openbio_res, biomistral_res]
 
       fuse_generations, ranks = blender.rank_and_fuse(
         [question],
