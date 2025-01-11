@@ -2,7 +2,7 @@ import streamlit as st
 import warnings
 import pandas as pd
 import json
-import markdown
+import random
 from dotenv import load_dotenv
 from st_draggable_list import DraggableList
 from langchain_community.llms import Ollama
@@ -60,11 +60,12 @@ for index, row in st.session_state['answers_df'].iterrows():
   st.subheader(f'Вопрос {index + 1}: {question}')
 
   answers = [
-    {'id': 'llama', 'order': 1, 'name': markdown.markdown(llama)},
-    {'id': 'gpt', 'order': 3, 'name': markdown.markdown(gpt)},
+    {'id': 'llama', 'order': 1, 'name': llama},
+    {'id': 'gpt', 'order': 3, 'name': gpt},
   ]
+  random.shuffle(answers)
 
-  slist = DraggableList(answers, width='100%')
+  slist = DraggableList(answers, width='100%', key=question)
   grades[question] = slist
 
 cols = st.columns(4)
