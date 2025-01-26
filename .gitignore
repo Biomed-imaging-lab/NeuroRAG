@@ -1,5 +1,10 @@
 .env
 .DS_Store
 
-**/__pycache__
-**/.mypy_cache
+__pycache__
+.mypy_cache
+.docs_cache
+.embeddings_cache
+.huggingface
+.ruff_cache
+chroma_db
