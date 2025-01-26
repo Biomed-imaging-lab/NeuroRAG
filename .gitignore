@@ -8,3 +8,4 @@ __pycache__
 .huggingface
 .ruff_cache
 chroma_db
+documents
