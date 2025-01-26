@@ -7,7 +7,7 @@ from langchain_core.runnables import RunnableLambda, RunnableParallel
 
 from json_extractor import JsonExtractor
 
-class RouteQuery(BaseModel):
+class RouteSchema(BaseModel):
   sources: list[str] = Field(
     description='Given a user question select the retrieval methods you consider the most appropriate for addressing this question. You may also return an empty array if no methods are required.',
   )
@@ -27,10 +27,10 @@ Possible retrieval methods:
 {format_instructions}
 
 User question:
-{question}
+{query}
 """
 
-parser = PydanticOutputParser(pydantic_object=RouteQuery)
+parser = PydanticOutputParser(pydantic_object=RouteSchema)
 
 class RouteChain:
   def __init__(self, llm):
@@ -41,7 +41,7 @@ class RouteChain:
     )
     prompt = PromptTemplate(
       template=template,
-      input_variables=['question'],
+      input_variables=['query'],
       partial_variables={'format_instructions': parser.get_format_instructions()},
     )
 
@@ -49,5 +49,5 @@ class RouteChain:
         completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: route_retry_parser.parse_with_prompt(**x))
 
-  def invoke(self, question: str) -> str:
-    return self.chain.invoke({'question': question})
+  def invoke(self, query: str) -> str:
+    return self.chain.invoke({'query': query})
