@@ -1,6 +1,5 @@
-import re
 import operator
-from typing import Annotated
+from typing import Annotated, Literal
 from typing_extensions import TypedDict
 
 from langchain.schema import Document
@@ -44,10 +43,10 @@ class GraphStateSchema(TypedDict):
   generations_number: int
 
 class NeuroRAG():
-  def __init__(self, temperature=0):
+  def __init__(self, temperature:int = 0) -> None:
     self.temperature = temperature
 
-  def compile(self):
+  def compile(self) -> None:
     self.llm = Ollama(model='llama3.1', temperature=self.temperature)
 
     embeddings = OllamaEmbeddings(model='llama3.1')
@@ -150,34 +149,25 @@ class NeuroRAG():
 
     self.app = workflow.compile()
 
-  def invoke(self, question):
+  def invoke(self, question: str):
     result = self.app.invoke({'question': question})
     return result
 
-  def extract_json_parser(self, response):
-    json_pattern = r'\{.*?\}'
-    match = re.search(json_pattern, response, re.DOTALL)
-
-    if match:
-      return match.group().strip()
-
-    return response
-
-  def route_question_node(self, state):
+  def route_question_node(self, state: GraphStateSchema) -> Literal['websearch', 'specialized_sources']:
     sources = state['specialized_sources']
     return 'websearch' if len(sources) == 0 else 'specialized_sources'
 
-  def generate_step_back_query_node(self, state):
+  def generate_step_back_query_node(self, state: GraphStateSchema):
     question = state['question']
     step_back_query = self.step_back_chain.invoke({'question': question})
     return {'step_back_query': step_back_query}
 
-  def generate_rewritten_query_node(self, state):
+  def generate_rewritten_query_node(self, state: GraphStateSchema):
     question = state['question']
     rewritten_query = self.query_rewrite_chain.invoke({'question': question})
     return {'rewritten_query': rewritten_query}
 
-  def generate_subqueries_node(self, state):
+  def generate_subqueries_node(self, state: GraphStateSchema):
     question = state['question']
 
     try:
@@ -190,7 +180,7 @@ class NeuroRAG():
 
     return {'subqueries': subqueries}
 
-  def generate_hyde_documents_node(self, state):
+  def generate_hyde_documents_node(self, state: GraphStateSchema):
     question = state['question']
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
@@ -205,7 +195,7 @@ class NeuroRAG():
 
     return {'question': question, 'generated_documents': generated_documents}
 
-  def vector_store_retriever_node(self, state):
+  def vector_store_retriever_node(self, state: GraphStateSchema):
     generated_documents = state['generated_documents']
     specialized_sources = state['specialized_sources']
 
@@ -219,7 +209,7 @@ class NeuroRAG():
 
     return {'documents': documents}
 
-  def pub_med_retriever_node(self, state):
+  def pub_med_retriever_node(self, state: GraphStateSchema):
     generated_documents = state['generated_documents']
     specialized_sources = state['specialized_sources']
 
@@ -236,7 +226,7 @@ class NeuroRAG():
 
     return {'documents': documents}
 
-  def arxiv_retriever_node(self, state):
+  def arxiv_retriever_node(self, state: GraphStateSchema):
     generated_documents = state['generated_documents']
     specialized_sources = state['specialized_sources']
 
@@ -253,7 +243,7 @@ class NeuroRAG():
 
     return {'documents': documents}
 
-  def ncbi_protein_db_retriever_node(self, state):
+  def ncbi_protein_db_retriever_node(self, state: GraphStateSchema):
     specialized_sources = state['specialized_sources']
 
     if 'ncbi_protein' not in specialized_sources:
@@ -275,7 +265,7 @@ class NeuroRAG():
 
     return {'documents': documents}
 
-  def ncbi_gene_db_retriever_node(self, state):
+  def ncbi_gene_db_retriever_node(self, state: GraphStateSchema):
     specialized_sources = state['specialized_sources']
 
     if 'ncbi_gene' not in specialized_sources:
@@ -297,7 +287,7 @@ class NeuroRAG():
 
     return {'documents': documents}
 
-  def grade_documents_node(self, state):
+  def grade_documents_node(self, state: GraphStateSchema):
     rewritten_query = state['rewritten_query']
     documents = state['documents']
 
@@ -331,11 +321,11 @@ class NeuroRAG():
       'web_search': len(filtered_documents) == 0,
     }
 
-  def decide_to_generate_node(self, state):
+  def decide_to_generate_node(self, state: GraphStateSchema):
     web_search = state['web_search']
     return 'websearch' if web_search else 'generate'
 
-  def web_search_node(self, state):
+  def web_search_node(self, state: GraphStateSchema):
     question = state['question']
 
     web_results = self.web_search_chain.invoke({'query': question})
@@ -343,7 +333,7 @@ class NeuroRAG():
 
     return {'documents': documents}
 
-  def generate_node(self, state):
+  def generate_node(self, state: GraphStateSchema):
     question = state['question']
     documents = state['documents']
     generations_number = state.get('generations_number', 0)
@@ -353,7 +343,7 @@ class NeuroRAG():
 
     return {'generation': generation, 'generations_number': generations_number + 1}
 
-  def grade_generation_node(self, state):
+  def grade_generation_node(self, state: GraphStateSchema) -> Literal['useful', 'not useful', 'not supported']:
     question = state['question']
     documents = state['documents']
     generation = state['generation']
