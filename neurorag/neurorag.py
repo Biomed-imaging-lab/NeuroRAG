@@ -328,8 +328,12 @@ class NeuroRAG():
   def web_search_node(self, state: GraphStateSchema):
     question = state['question']
 
-    web_results = self.web_search_chain.invoke({'query': question})
-    documents = [Document(page_content=result['content'], metadata={'source': result['url']}) for result in web_results]
+    try:
+      web_results = self.web_search_chain.invoke({'query': question})
+      documents = [Document(page_content=result['content'], metadata={'source': result['url']}) for result in web_results]
+    except Exception as e:
+      print(e)
+      documents = []
 
     return {'documents': documents}
 
