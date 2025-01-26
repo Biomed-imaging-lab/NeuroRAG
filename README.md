@@ -1,4 +1,4 @@
-# NeuroRAG
+# NeuroRAG: A Multi-Agent Model for Neurobiological Question Answering.docx
 
 ## Getting started
 
