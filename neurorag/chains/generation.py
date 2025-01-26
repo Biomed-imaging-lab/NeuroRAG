@@ -42,8 +42,8 @@ Answer:
 """
 
 class GenerationChain:
-  def __init__(self, user_template: str | None = None) -> None:
-    rag_prompt = PromptTemplate.from_template(user_template or template)
+  def __init__(self, user_prompt = None) -> None:
+    rag_prompt = user_prompt or PromptTemplate.from_template(template)
 
     gpt_llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
     openbio_llm = Ollama(model='taozhiyuai/openbiollm-llama-3:70b_q2_k', temperature=0)
@@ -81,5 +81,8 @@ class GenerationChain:
     )
     return fuse_generations[0]
 
-  def invoke(self, query: str) -> str:
+  def invoke(self, query: str, user_prompt = None) -> str:
+    if user_prompt:
+      self.user_prompt = user_prompt
+
     return self.chain.invoke({'query': query})

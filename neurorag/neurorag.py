@@ -43,9 +43,9 @@ class GraphStateSchema(TypedDict):
   generations_number: int
 
 class NeuroRAG():
-  def __init__(self, temperature: int = 0, generation_template: str | None = None) -> None:
+  def __init__(self, temperature: int = 0, generation_prompt = None) -> None:
     self.temperature = temperature
-    self.generation_template = generation_template
+    self.generation_prompt = generation_prompt
 
   def compile(self) -> None:
     self.llm = Ollama(model='llama3.1', temperature=self.temperature)
@@ -76,7 +76,7 @@ class NeuroRAG():
     self.ncbi_gene_db_chain = NCBIGeneChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=5)
-    self.generation_chain = GenerationChain(self.generation_template)
+    self.generation_chain = GenerationChain(self.generation_prompt)
     self.hallucinations_chain = HallucinationsChain(self.llm)
     self.answer_grade_chain = AnswerGradeChain(self.llm)
 
