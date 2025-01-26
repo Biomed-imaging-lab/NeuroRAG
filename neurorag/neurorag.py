@@ -25,7 +25,7 @@ from chains.ncbi_gene import NCBIGeneChain
 from chains.generation import GenerationChain
 
 class GraphStateSchema(TypedDict):
-  question: str
+  query: str
 
   specialized_sources: list[str]
 
@@ -105,7 +105,7 @@ class NeuroRAG():
     workflow.add_edge(START, 'determine_specialized_sources')
     workflow.add_conditional_edges(
       'determine_specialized_sources',
-      self.route_question_node,
+      self.route_query_node,
       {
         'websearch': 'websearch',
         'specialized_sources': 'generate_step_back_query',
@@ -149,29 +149,29 @@ class NeuroRAG():
 
     self.app = workflow.compile()
 
-  def invoke(self, question: str):
-    result = self.app.invoke({'question': question})
+  def invoke(self, query: str):
+    result = self.app.invoke({'query': query})
     return result
 
-  def route_question_node(self, state: GraphStateSchema) -> Literal['websearch', 'specialized_sources']:
+  def route_query_node(self, state: GraphStateSchema) -> Literal['websearch', 'specialized_sources']:
     sources = state['specialized_sources']
     return 'websearch' if len(sources) == 0 else 'specialized_sources'
 
   def generate_step_back_query_node(self, state: GraphStateSchema):
-    question = state['question']
-    step_back_query = self.step_back_chain.invoke({'question': question})
+    query = state['query']
+    step_back_query = self.step_back_chain.invoke({'query': query})
     return {'step_back_query': step_back_query}
 
   def generate_rewritten_query_node(self, state: GraphStateSchema):
-    question = state['question']
-    rewritten_query = self.query_rewrite_chain.invoke({'question': question})
+    query = state['query']
+    rewritten_query = self.query_rewrite_chain.invoke({'query': query})
     return {'rewritten_query': rewritten_query}
 
   def generate_subqueries_node(self, state: GraphStateSchema):
-    question = state['question']
+    query = state['query']
 
     try:
-      decomposition_answer = self.decomposition_chain.invoke({'question': question})
+      decomposition_answer = self.decomposition_chain.invoke({'query': query})
       subqueries = decomposition_answer.subqueries
       # Limit to a maximum of four subqueries
       subqueries = subqueries[:4]
@@ -182,19 +182,19 @@ class NeuroRAG():
     return {'subqueries': subqueries}
 
   def generate_hyde_documents_node(self, state: GraphStateSchema):
-    question = state['question']
+    query = state['query']
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
-    queries = [question, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, rewritten_query, *subqueries]
     generated_documents = []
 
     for query in queries:
-      generated_document = self.hyde_chain.invoke({'question': query})
+      generated_document = self.hyde_chain.invoke({'query': query})
       generated_documents.append(generated_document)
 
-    return {'question': question, 'generated_documents': generated_documents}
+    return {'query': query, 'generated_documents': generated_documents}
 
   def vector_store_retriever_node(self, state: GraphStateSchema):
     generated_documents = state['generated_documents']
@@ -252,12 +252,12 @@ class NeuroRAG():
     if 'ncbi_protein' not in specialized_sources:
       return {'documents': []}
 
-    question = state['question']
+    query = state['query']
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
-    queries = [question, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, rewritten_query, *subqueries]
     documents = []
 
     for query in queries:
@@ -275,12 +275,12 @@ class NeuroRAG():
     if 'ncbi_gene' not in specialized_sources:
       return {'documents': []}
 
-    question = state['question']
+    query = state['query']
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
-    queries = [question, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, rewritten_query, *subqueries]
     documents = []
 
     for query in queries:
@@ -307,7 +307,7 @@ class NeuroRAG():
     for document in retrieved_documents:
       try:
         score = self.document_grade_chain.invoke({
-          'question': rewritten_query,
+          'query': rewritten_query,
           'document': document.page_content,
         })
         grade = score.binary_score
@@ -329,10 +329,10 @@ class NeuroRAG():
     return 'websearch' if web_search else 'generate'
 
   def web_search_node(self, state: GraphStateSchema):
-    question = state['question']
+    query = state['query']
 
     try:
-      web_results = self.web_search_chain.invoke({'query': question})
+      web_results = self.web_search_chain.invoke({'query': query})
       documents = [Document(page_content=result['content'], metadata={'source': result['url']}) for result in web_results]
     except Exception as e:
       print(e)
@@ -341,17 +341,17 @@ class NeuroRAG():
     return {'documents': documents}
 
   def generate_node(self, state: GraphStateSchema):
-    question = state['question']
+    query = state['query']
     documents = state['documents']
     generations_number = state.get('generations_number', 0)
 
     context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
-    generation = self.generation_chain.invoke({'context': context, 'question': question})
+    generation = self.generation_chain.invoke({'context': context, 'query': query})
 
     return {'generation': generation, 'generations_number': generations_number + 1}
 
   def grade_generation_node(self, state: GraphStateSchema) -> Literal['useful', 'not useful', 'not supported']:
-    question = state['question']
+    query = state['query']
     documents = state['documents']
     generation = state['generation']
     generations_number = state['generations_number']
@@ -373,7 +373,7 @@ class NeuroRAG():
     if grade == 'yes':
       try:
         score = self.answer_grade_chain.invoke({
-          'question': question,
+          'query': query,
           'generation': generation,
         })
         grade = score.binary_score.lower()
