@@ -7,26 +7,25 @@ from langchain_core.runnables import RunnableLambda, RunnableParallel
 
 from json_extractor import JsonExtractor
 
-class HallucinationsSchema(BaseModel):
-  binary_score: str = Field(description="Answer is grounded in the facts, 'yes' or 'no'")
+class AnswerGradeSchema(BaseModel):
+  binary_score: str = Field(description="Answer addresses the question, 'yes' or 'no'")
 
 template = """
-You are a grader assessing relevance of a retrieved document to a user question.
-If the document contains keyword(s) or semantic meaning related to the question, grade it as relevant.
-Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question.
-
-{format_instructions}
+You are a grader assessing whether an answer addresses / resolves a question. \n
+Give a binary score 'yes' or 'no'. 'yes' means that the answer resolves the question.
 
 User question:
 {query}
 
-Retrieved document:
-{document}
+LLM generation:
+{generation}
+
+{format_instructions}
 """
 
-parser = PydanticOutputParser(pydantic_object=HallucinationsSchema)
+parser = PydanticOutputParser(pydantic_object=AnswerGradeSchema)
 
-class HallucinationsChain:
+class AnswerGradeChain:
   def __init__(self, llm):
     retry_parser = RetryOutputParser.from_llm(
       parser=parser,

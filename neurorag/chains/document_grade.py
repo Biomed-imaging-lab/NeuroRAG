@@ -7,7 +7,7 @@ from langchain_core.runnables import RunnableLambda, RunnableParallel
 
 from json_extractor import JsonExtractor
 
-class GradeSchema(BaseModel):
+class DocumentGradeSchema(BaseModel):
   binary_score: str = Field(description="Documents are relevant to the question, 'yes' or 'no'")
 
 template = """
@@ -24,9 +24,9 @@ Retrieved document:
 {document}
 """
 
-parser = PydanticOutputParser(pydantic_object=GradeSchema)
+parser = PydanticOutputParser(pydantic_object=DocumentGradeSchema)
 
-class GradeChain:
+class DocumentGradeChain:
   def __init__(self, llm):
     retry_parser = RetryOutputParser.from_llm(
       parser=parser,
