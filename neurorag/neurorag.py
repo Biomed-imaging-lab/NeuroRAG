@@ -175,7 +175,8 @@ class NeuroRAG():
       subqueries = decomposition_answer.subqueries
       # Limit to a maximum of four subqueries
       subqueries = subqueries[:4]
-    except:
+    except Exception as e:
+      print(e)
       subqueries = []
 
     return {'subqueries': subqueries}
@@ -221,7 +222,8 @@ class NeuroRAG():
     for generated_document in generated_documents:
       try:
         documents.extend(self.pub_med_retriever.invoke(generated_document))
-      except:
+      except Exception as e:
+        print(e)
         pass
 
     return {'documents': documents}
@@ -238,7 +240,8 @@ class NeuroRAG():
     for generated_document in generated_documents:
       try:
         documents.extend(self.arxiv_retriever.invoke(generated_document))
-      except:
+      except Exception as e:
+        print(e)
         pass
 
     return {'documents': documents}
@@ -260,7 +263,8 @@ class NeuroRAG():
     for query in queries:
       try:
         documents.extend(self.ncbi_protein_db_chain.invoke(query))
-      except:
+      except Exception as e:
+        print(e)
         pass
 
     return {'documents': documents}
@@ -282,7 +286,8 @@ class NeuroRAG():
     for query in queries:
       try:
         documents.extend(self.ncbi_gene_db_chain.invoke(query))
-      except:
+      except Exception as e:
+        print(e)
         pass
 
     return {'documents': documents}
@@ -298,22 +303,20 @@ class NeuroRAG():
     retriever = BM25Retriever.from_documents(unique_documents)
     retrieved_documents = retriever.invoke(rewritten_query)
     filtered_documents = []
-    web_search = False
 
-    for index, document in enumerate(retrieved_documents):
+    for document in retrieved_documents:
       try:
         score = self.document_grade_chain.invoke({
           'question': rewritten_query,
           'document': document.page_content,
         })
         grade = score.binary_score
-      except:
-        grade = 'No'
+      except Exception as e:
+        print(e)
+        grade = 'no'
 
       if grade.lower() == 'yes':
         filtered_documents.append(document)
-      else:
-        web_search = True
 
     state['documents'].clear()
     return {
@@ -363,7 +366,8 @@ class NeuroRAG():
         'generation': generation,
       })
       grade = score.binary_score
-    except:
+    except Exception as e:
+      print(e)
       grade = 'no'
 
     if grade == 'yes':
@@ -373,7 +377,8 @@ class NeuroRAG():
           'generation': generation,
         })
         grade = score.binary_score.lower()
-      except:
+      except Exception as e:
+        print(e)
         grade = 'no'
 
       if grade == 'yes':
