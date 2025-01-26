@@ -12,7 +12,7 @@ class RouteQuery(BaseModel):
     description='Given a user question select the retrieval methods you consider the most appropriate for addressing this question. You may also return an empty array if no methods are required.',
   )
 
-route_template = """
+template = """
 You are an expert at selecting retrieval methods.
 Given a user question select the retrieval methods you consider the most appropriate for addressing user question.
 You may also return an empty array if no methods are required.
@@ -30,23 +30,23 @@ User question:
 {question}
 """
 
-route_parser = PydanticOutputParser(pydantic_object=RouteQuery)
+parser = PydanticOutputParser(pydantic_object=RouteQuery)
 
 class RouteChain:
   def __init__(self, llm):
     route_retry_parser = RetryOutputParser.from_llm(
-        parser=route_parser,
+        parser=parser,
         llm=llm,
         max_retries=3,
     )
-    route_prompt = PromptTemplate(
-      template=route_template,
+    prompt = PromptTemplate(
+      template=template,
       input_variables=['question'],
-      partial_variables={'format_instructions': route_parser.get_format_instructions()},
+      partial_variables={'format_instructions': parser.get_format_instructions()},
     )
 
     self.chain = RunnableParallel(
-        completion=route_prompt | llm | JsonExtractor(), prompt_value=route_prompt
+        completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: route_retry_parser.parse_with_prompt(**x))
 
   def invoke(self, question: str) -> str:
