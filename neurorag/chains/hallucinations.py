@@ -7,8 +7,8 @@ from langchain_core.runnables import RunnableLambda, RunnableParallel
 
 from json_extractor import JsonExtractor
 
-class GradeSchema(BaseModel):
-  binary_score: str = Field(description="Documents are relevant to the question, 'yes' or 'no'")
+class HallucinationsSchema(BaseModel):
+  binary_score: str = Field(description="Answer is grounded in the facts, 'yes' or 'no'")
 
 template = """
 You are a grader assessing relevance of a retrieved document to a user question.
@@ -24,7 +24,7 @@ Retrieved document:
 {document}
 """
 
-parser = PydanticOutputParser(pydantic_object=GradeSchema)
+parser = PydanticOutputParser(pydantic_object=HallucinationsSchema)
 
 class GradeChain:
   def __init__(self, llm):
@@ -35,7 +35,7 @@ class GradeChain:
     )
     prompt = PromptTemplate(
       template=template,
-      input_variables=['document', 'query'],
+      input_variables=['query', 'generation'],
       partial_variables={'format_instructions': parser.get_format_instructions()},
     )
 

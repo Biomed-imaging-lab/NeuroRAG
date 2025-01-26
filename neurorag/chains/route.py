@@ -34,10 +34,10 @@ parser = PydanticOutputParser(pydantic_object=RouteSchema)
 
 class RouteChain:
   def __init__(self, llm):
-    route_retry_parser = RetryOutputParser.from_llm(
-        parser=parser,
-        llm=llm,
-        max_retries=3,
+    retry_parser = RetryOutputParser.from_llm(
+      parser=parser,
+      llm=llm,
+      max_retries=3,
     )
     prompt = PromptTemplate(
       template=template,
@@ -47,7 +47,7 @@ class RouteChain:
 
     self.chain = RunnableParallel(
         completion=prompt | llm | JsonExtractor(), prompt_value=prompt
-    ) | RunnableLambda(lambda x: route_retry_parser.parse_with_prompt(**x))
+    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, query: str) -> str:
     return self.chain.invoke({'query': query})
