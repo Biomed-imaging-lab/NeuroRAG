@@ -69,7 +69,6 @@ class NeuroRAG():
       load_max_docs=3,
       get_ful_documents=True,
     )
-    self.ncbi_protein_retriever = NCBIProteinRetriever(k=3)
 
     self.route_chain = RouteChain(self.llm)
     self.hyde_chain = HyDEChain(self.llm)
@@ -80,9 +79,9 @@ class NeuroRAG():
     self.ncbi_gene_db_chain = NCBIGeneChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=5)
-    self.rag_chain = GenerationChain()
-    self.hallucinations_grader_chain = HallucinationsChain(self.llm)
-    self.answer_grader_chain = AnswerGradeChain(self.llm)
+    self.generation_chain = GenerationChain()
+    self.hallucinations_chain = HallucinationsChain(self.llm)
+    self.answer_grade_chain = AnswerGradeChain(self.llm)
 
     workflow = StateGraph(GraphStateSchema)
 
@@ -92,7 +91,7 @@ class NeuroRAG():
     workflow.add_node('generate_rewritten_query', self.generate_rewritten_query_node)
     workflow.add_node('generate_subqueries', self.generate_subqueries_node)
 
-    workflow.add_node('generate_hyde_docs', self.generate_hyde_docs_node)
+    workflow.add_node('generate_hyde_documents', self.generate_hyde_documents_node)
 
     workflow.add_node('vector_store_retriever', self.vector_store_retriever_node)
     workflow.add_node('pub_med_retriever', self.pub_med_retriever_node)
@@ -116,13 +115,13 @@ class NeuroRAG():
 
     workflow.add_edge('generate_step_back_query', 'generate_rewritten_query')
     workflow.add_edge('generate_rewritten_query', 'generate_subqueries')
-    workflow.add_edge('generate_subqueries', 'generate_hyde_docs')
+    workflow.add_edge('generate_subqueries', 'generate_hyde_documents')
 
-    workflow.add_edge('generate_hyde_docs', 'vector_store_retriever')
-    workflow.add_edge('generate_hyde_docs', 'pub_med_retriever')
-    workflow.add_edge('generate_hyde_docs', 'arxiv_retriever')
-    workflow.add_edge('generate_hyde_docs', 'ncbi_protein_db_retriever')
-    workflow.add_edge('generate_hyde_docs', 'ncbi_gene_db_retriever')
+    workflow.add_edge('generate_hyde_documents', 'vector_store_retriever')
+    workflow.add_edge('generate_hyde_documents', 'pub_med_retriever')
+    workflow.add_edge('generate_hyde_documents', 'arxiv_retriever')
+    workflow.add_edge('generate_hyde_documents', 'ncbi_protein_db_retriever')
+    workflow.add_edge('generate_hyde_documents', 'ncbi_gene_db_retriever')
 
     workflow.add_edge('vector_store_retriever', 'grade_documents')
     workflow.add_edge('pub_med_retriever', 'grade_documents')
@@ -191,7 +190,7 @@ class NeuroRAG():
 
     return {'subqueries': subqueries}
 
-  def generate_hyde_docs_node(self, state):
+  def generate_hyde_documents_node(self, state):
     question = state['question']
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
@@ -340,9 +339,9 @@ class NeuroRAG():
     question = state['question']
 
     web_results = self.web_search_chain.invoke({'query': question})
-    docs = [Document(page_content=result['content'], metadata={'source': result['url']}) for result in web_results]
+    documents = [Document(page_content=result['content'], metadata={'source': result['url']}) for result in web_results]
 
-    return {'documents': docs}
+    return {'documents': documents}
 
   def generate_node(self, state):
     question = state['question']
@@ -350,7 +349,7 @@ class NeuroRAG():
     generations_number = state.get('generations_number', 0)
 
     context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
-    generation = self.rag_chain.invoke({'context': context, 'question': question})
+    generation = self.generation_chain.invoke({'context': context, 'question': question})
 
     return {'generation': generation, 'generations_number': generations_number + 1}
 
@@ -365,7 +364,7 @@ class NeuroRAG():
 
     try:
       context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
-      score = self.hallucinations_grader_chain.invoke({
+      score = self.hallucinations_chain.invoke({
         'documents': context,
         'generation': generation,
       })
@@ -375,7 +374,7 @@ class NeuroRAG():
 
     if grade == 'yes':
       try:
-        score = self.answer_grader_chain.invoke({
+        score = self.answer_grade_chain.invoke({
           'question': question,
           'generation': generation,
         })
