@@ -8,7 +8,7 @@ from langchain_core.runnables import RunnableLambda, RunnableParallel
 from json_extractor import JsonExtractor
 
 class QueryRewritingSchema(BaseModel):
-  rewritten_query: str = Field(description="Given the original query, rewrite it to be more specific, detailed, and likely to retrieve relevant information.")
+  rewritten_query: str = Field(description='Given the original query, rewrite it to be more specific, detailed, and likely to retrieve relevant information.')
 
 template = """
 You are an AI assistant tasked with reformulating user queries to improve retrieval in a RAG system.
