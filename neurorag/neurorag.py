@@ -64,10 +64,7 @@ class NeuroRAG():
     )
     self.vector_store_retriever = self.vector_store.as_retriever()
     self.pub_med_retriever = PubMedRetriever()
-    self.arxiv_retriever = ArxivRetriever(
-      load_max_docs=3,
-      get_ful_documents=True,
-    )
+    self.arxiv_retriever = ArxivRetriever(load_max_docs=3, get_ful_documents=True)
 
     self.route_chain = RouteChain(self.llm)
     self.hyde_chain = HyDEChain(self.llm)
