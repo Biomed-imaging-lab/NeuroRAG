@@ -1,6 +1,0 @@
-.huggingface
-.embeddings_cache
-.docs_cache
-.ruff_cache
-
-docs
