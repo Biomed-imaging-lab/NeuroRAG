@@ -10,7 +10,7 @@ from langchain.embeddings.cache import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
 from langchain_community.llms import Ollama
 from langgraph.graph import START, END, StateGraph
-from langchain_community.retrievers import PubMedRetriever, ArxivRetriever
+from langchain_community.retrievers import PubMedRetriever, ArxivRetriever, BM25Retriever
 from langchain_community.tools.tavily_search import TavilySearchResults
 
 from chains.route import RouteChain
@@ -38,7 +38,7 @@ class GraphStateSchema(TypedDict):
 
   documents: Annotated[list, operator.add]
 
-  web_search: str
+  web_search: bool
 
   generation: str
   generations_number: int
@@ -78,7 +78,7 @@ class NeuroRAG():
     self.decomposition_chain = DecompositionChain(self.llm)
     self.ncbi_protein_db_chain = NCBIProteinChain(self.llm)
     self.ncbi_gene_db_chain = NCBIGeneChain(self.llm)
-    self.docs_grader_chain = DocumentGradeChain(self.llm)
+    self.document_grade_chain = DocumentGradeChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=5)
     self.rag_chain = GenerationChain()
     self.hallucinations_grader_chain = HallucinationsChain(self.llm)
@@ -165,34 +165,20 @@ class NeuroRAG():
     return response
 
   def route_question_node(self, state):
-    print('---ROUTE QUESTION---')
-
     sources = state['specialized_sources']
-
-    if len(sources) == 0:
-      print('---ROUTE QUESTION TO WEB SEARCH---')
-      return 'websearch'
-    else:
-      print(f'---ROUTE QUESTION TO SPECIALIZED SOURCES: {', '.join([source.upper() for source in sources])}---')
-      return 'specialized_sources'
+    return 'websearch' if len(sources) == 0 else 'specialized_sources'
 
   def generate_step_back_query_node(self, state):
-    print('---GENERATE STEP-BACK QUERY---')
-
     question = state['question']
     step_back_query = self.step_back_chain.invoke({'question': question})
     return {'step_back_query': step_back_query}
 
   def generate_rewritten_query_node(self, state):
-    print('---GENERATE REWRITTEN QUERY---')
-
     question = state['question']
     rewritten_query = self.query_rewrite_chain.invoke({'question': question})
     return {'rewritten_query': rewritten_query}
 
   def generate_subqueries_node(self, state):
-    print('---GENERATE SUBQUERIES---')
-
     question = state['question']
 
     try:
@@ -203,13 +189,9 @@ class NeuroRAG():
     except:
       subqueries = []
 
-    print(f'---FINAL SUBQUERIES NUMBER: {len(subqueries)}---')
-
     return {'subqueries': subqueries}
 
   def generate_hyde_docs_node(self, state):
-    print('---GENERATE HYDE DOCUMENTS---')
-
     question = state['question']
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
@@ -231,8 +213,6 @@ class NeuroRAG():
     if 'vectorstore' not in specialized_sources:
       return {'documents': []}
 
-    print('---RETRIEVE FROM VECTOR STORE---')
-
     documents = []
 
     for generated_document in generated_documents:
@@ -246,8 +226,6 @@ class NeuroRAG():
 
     if 'pubmed' not in specialized_sources:
       return {'documents': []}
-
-    print('---RETRIEVE FROM PUBMED---')
 
     documents = []
 
@@ -266,8 +244,6 @@ class NeuroRAG():
     if 'arxiv' not in specialized_sources:
       return {'documents': []}
 
-    print('---RETRIEVE FROM ARXIV---')
-
     documents = []
 
     for generated_document in generated_documents:
@@ -283,8 +259,6 @@ class NeuroRAG():
 
     if 'ncbi_protein' not in specialized_sources:
       return {'documents': []}
-
-    print('---RETRIEVE FROM NCBI PROTEIN DB---')
 
     question = state['question']
     step_back_query = state['step_back_query']
@@ -308,8 +282,6 @@ class NeuroRAG():
     if 'ncbi_gene' not in specialized_sources:
       return {'documents': []}
 
-    print('---RETRIEVE FROM NCBI GENE DB---')
-
     question = state['question']
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
@@ -327,57 +299,44 @@ class NeuroRAG():
     return {'documents': documents}
 
   def grade_documents_node(self, state):
-    print('---CHECK DOCUMENT RELEVANCE TO QUESTION---')
-
-    question = state['question']
+    rewritten_query = state['rewritten_query']
     documents = state['documents']
 
-    print(f'---INITIAL DOCUMENTS NUMBER: {len(documents)}---')
+    if len(documents) == 0:
+      return {'documents': [], 'web_search': True}
 
+    unique_documents = list({doc.page_content: doc for doc in documents}.values())
+    retriever = BM25Retriever.from_documents(unique_documents)
+    retrieved_documents = retriever.invoke(rewritten_query)
     filtered_documents = []
-    seen_contents = set()
-    web_search = 'No'
+    web_search = False
 
-    for index, document in enumerate(documents):
-      print(f'---GRADE DOCUMENT ({index + 1}/{len(documents)})---')
-
-      if document.page_content in seen_contents:
-        print('---GRADE: DOCUMENT IS REPEATED---')
-        continue
-      seen_contents.add(document.page_content)
-
+    for index, document in enumerate(retrieved_documents):
       try:
-        score = self.docs_grader_chain.invoke({
-          'question': question,
+        score = self.document_grade_chain.invoke({
+          'question': rewritten_query,
           'document': document.page_content,
         })
         grade = score.binary_score
       except:
-        grade = 'no'
+        grade = 'No'
 
       if grade.lower() == 'yes':
-        print('---GRADE: DOCUMENT RELEVANT---')
         filtered_documents.append(document)
       else:
-        print('---GRADE: DOCUMENT NOT RELEVANT---')
-        web_search = 'Yes'
-        continue
-
-    print(f'---FINAL DOCUMENTS NUMBER: {len(filtered_documents)}---')
+        web_search = True
 
     state['documents'].clear()
     return {
       'documents': filtered_documents,
-      'web_search': web_search,
+      'web_search': len(filtered_documents) == 0,
     }
 
   def decide_to_generate_node(self, state):
     web_search = state['web_search']
-    return 'websearch' if web_search == 'Yes' else 'generate'
+    return 'websearch' if web_search else 'generate'
 
   def web_search_node(self, state):
-    print('---WEB SEARCH---')
-
     question = state['question']
 
     web_results = self.web_search_chain.invoke({'query': question})
@@ -386,8 +345,6 @@ class NeuroRAG():
     return {'documents': docs}
 
   def generate_node(self, state):
-    print('---GENERATE---')
-
     question = state['question']
     documents = state['documents']
     generations_number = state.get('generations_number', 0)
@@ -398,8 +355,6 @@ class NeuroRAG():
     return {'generation': generation, 'generations_number': generations_number + 1}
 
   def grade_generation_node(self, state):
-    print('---CHECK HALLUCINATIONS---')
-
     question = state['question']
     documents = state['documents']
     generation = state['generation']
@@ -419,9 +374,6 @@ class NeuroRAG():
       grade = 'no'
 
     if grade == 'yes':
-      print('---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---')
-      print('---GRADE GENERATION vs QUESTION---')
-
       try:
         score = self.answer_grader_chain.invoke({
           'question': question,
@@ -432,11 +384,8 @@ class NeuroRAG():
         grade = 'no'
 
       if grade == 'yes':
-        print('---DECISION: GENERATION ADDRESSES QUESTION---')
         return 'useful'
       else:
-        print('---DECISION: GENERATION DOES NOT ADDRESS QUESTION---')
         return 'not useful'
     else:
-      print('---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---')
       return 'not supported'
