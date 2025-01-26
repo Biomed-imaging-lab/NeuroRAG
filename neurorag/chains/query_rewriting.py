@@ -23,17 +23,18 @@ Rewritten query:
 
 parser = PydanticOutputParser(pydantic_object=QueryRewritingSchema)
 
+prompt = PromptTemplate(
+  template=template,
+  input_variables=['query'],
+  partial_variables={'format_instructions': parser.get_format_instructions()},
+)
+
 class QueryRewritingChain:
   def __init__(self, llm):
     retry_parser = RetryOutputParser.from_llm(
       parser=parser,
       llm=llm,
       max_retries=3,
-    )
-    prompt = PromptTemplate(
-      template=template,
-      input_variables=['query'],
-      partial_variables={'format_instructions': parser.get_format_instructions()},
     )
 
     self.chain = RunnableParallel(
