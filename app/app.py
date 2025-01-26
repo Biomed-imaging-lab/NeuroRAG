@@ -1,6 +1,6 @@
 import streamlit as st
 import pickle
-from neurorag import NeuroRAG
+from neurorag.neurorag import NeuroRAG
 import warnings
 from dotenv import load_dotenv
 
