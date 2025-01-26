@@ -3,12 +3,12 @@ import llm_blender
 from operator import itemgetter
 from typing import TypedDict
 
-from langchain.output_parsers import RetryOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnableLambda, RunnableParallel
+from langchain_core.runnables import RunnableLambda
 from langchain_openai import ChatOpenAI
 from langchain_community.llms import Ollama
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableSerializable
 
 from json_extractor import JsonExtractor
 
@@ -40,19 +40,20 @@ Context:
 
 Answer:
 """
-rag_prompt = PromptTemplate.from_template(template)
-
-gpt_llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
-openbio_llm = Ollama(model='taozhiyuai/openbiollm-llama-3:70b_q2_k', temperature=0)
-biomistral_llm = Ollama(model='cniongolo/biomistral', temperature=0)
-
-gpt_chain = rag_prompt | gpt_llm | StrOutputParser()
-openbio_chain = rag_prompt | openbio_llm | StrOutputParser()
-biomistral_chain = rag_prompt | biomistral_llm | StrOutputParser()
 
 class GenerationChain:
-  def __init__(self):
-    self.chain = (
+  def __init__(self, user_template: str | None = None) -> None:
+    rag_prompt = PromptTemplate.from_template(user_template or template)
+
+    gpt_llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
+    openbio_llm = Ollama(model='taozhiyuai/openbiollm-llama-3:70b_q2_k', temperature=0)
+    biomistral_llm = Ollama(model='cniongolo/biomistral', temperature=0)
+
+    gpt_chain = rag_prompt | gpt_llm | StrOutputParser()
+    openbio_chain = rag_prompt | openbio_llm | StrOutputParser()
+    biomistral_chain = rag_prompt | biomistral_llm | StrOutputParser()
+
+    self.chain: RunnableSerializable = (
       {
         'gpt_res': gpt_chain,
         'openbio_res': openbio_chain,
