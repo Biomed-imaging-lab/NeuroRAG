@@ -1,6 +1,4 @@
-# biorag-chatbot
-
-
+# NeuroRAG
 
 ## Getting started
 
