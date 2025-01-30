@@ -11,24 +11,23 @@ class HallucinationsSchema(BaseModel):
   binary_score: str = Field(description="Answer is grounded in the facts, 'yes' or 'no'")
 
 template = """
-You are a grader assessing relevance of a retrieved document to a user question.
-If the document contains keyword(s) or semantic meaning related to the question, grade it as relevant.
-Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question.
+You are a grader assessing whether an LLM generation is grounded in / supported by a set of retrieved facts. \n
+Give a binary score 'yes' or 'no'. 'Yes' means that the answer is grounded in / supported by the set of facts."
 
 {format_instructions}
 
-User question:
-{query}
+Set of facts:
+{documents}
 
-Retrieved document:
-{document}
+LLM generation:
+{generation}
 """
 
 parser = PydanticOutputParser(pydantic_object=HallucinationsSchema)
 
 prompt = PromptTemplate(
   template=template,
-  input_variables=['query', 'document'],
+  input_variables=['query', 'documents'],
   partial_variables={'format_instructions': parser.get_format_instructions()},
 )
 
@@ -44,5 +43,5 @@ class HallucinationsChain:
         completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
-  def invoke(self, query: str) -> str:
-    return self.chain.invoke({'query': query})
+  def invoke(self, generation: str, documents: str) -> str:
+    return self.chain.invoke({'generation': generation, 'documents': documents})

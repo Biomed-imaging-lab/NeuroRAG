@@ -81,8 +81,8 @@ class GenerationChain:
     )
     return fuse_generations[0]
 
-  def invoke(self, query: str, user_prompt = None) -> str:
+  def invoke(self, query: str, context: str, user_prompt = None) -> str:
     if user_prompt:
       self.user_prompt = user_prompt
 
-    return self.chain.invoke({'query': query})
+    return self.chain.invoke({'query': query, 'context': context})

@@ -151,25 +151,36 @@ class NeuroRAG():
     result = self.app.invoke({'query': query})
     return result
 
+  def determine_specialized_src_node(self, state):
+    query = state['query']
+
+    try:
+      res = self.route_chain.invoke(query)
+      specialized_sources = [src.strip().lower() for src in res.sources]
+    except:
+      specialized_sources = []
+
+    return {'specialized_sources': specialized_sources}
+
   def route_query_node(self, state: GraphStateSchema) -> Literal['websearch', 'specialized_sources']:
     sources = state['specialized_sources']
     return 'websearch' if len(sources) == 0 else 'specialized_sources'
 
   def generate_step_back_query_node(self, state: GraphStateSchema):
     query = state['query']
-    step_back_query = self.step_back_chain.invoke({'query': query})
+    step_back_query = self.step_back_chain.invoke(query)
     return {'step_back_query': step_back_query}
 
   def generate_rewritten_query_node(self, state: GraphStateSchema):
     query = state['query']
-    rewritten_query = self.query_rewrite_chain.invoke({'query': query})
+    rewritten_query = self.query_rewrite_chain.invoke(query)
     return {'rewritten_query': rewritten_query}
 
   def generate_subqueries_node(self, state: GraphStateSchema):
     query = state['query']
 
     try:
-      decomposition_answer = self.decomposition_chain.invoke({'query': query})
+      decomposition_answer = self.decomposition_chain.invoke(query)
       subqueries = decomposition_answer.subqueries
       # Limit to a maximum of four subqueries
       subqueries = subqueries[:4]
@@ -189,7 +200,7 @@ class NeuroRAG():
     generated_documents = []
 
     for query in queries:
-      generated_document = self.hyde_chain.invoke({'query': query})
+      generated_document = self.hyde_chain.invoke(query)
       generated_documents.append(generated_document)
 
     return {'query': query, 'generated_documents': generated_documents}
@@ -304,10 +315,7 @@ class NeuroRAG():
 
     for document in retrieved_documents:
       try:
-        score = self.document_grade_chain.invoke({
-          'query': rewritten_query,
-          'document': document.page_content,
-        })
+        score = self.document_grade_chain.invoke(rewritten_query, document)
         grade = score.binary_score
       except Exception as e:
         print(e)
@@ -315,6 +323,8 @@ class NeuroRAG():
 
       if grade.lower() == 'yes':
         filtered_documents.append(document)
+
+    filtered_documents = filtered_documents[:10]
 
     state['documents'].clear()
     return {
@@ -330,7 +340,7 @@ class NeuroRAG():
     query = state['query']
 
     try:
-      web_results = self.web_search_chain.invoke({'query': query})
+      web_results = self.web_search_chain.invoke(query)
       documents = [Document(page_content=result['content'], metadata={'source': result['url']}) for result in web_results]
     except Exception as e:
       print(e)
@@ -344,7 +354,7 @@ class NeuroRAG():
     generations_number = state.get('generations_number', 0)
 
     context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
-    generation = self.generation_chain.invoke({'context': context, 'query': query})
+    generation = self.generation_chain.invoke(query, context)
 
     return {'generation': generation, 'generations_number': generations_number + 1}
 
@@ -359,10 +369,7 @@ class NeuroRAG():
 
     try:
       context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
-      score = self.hallucinations_chain.invoke({
-        'documents': context,
-        'generation': generation,
-      })
+      score = self.hallucinations_chain.invoke(generation, context)
       grade = score.binary_score
     except Exception as e:
       print(e)
@@ -370,10 +377,7 @@ class NeuroRAG():
 
     if grade == 'yes':
       try:
-        score = self.answer_grade_chain.invoke({
-          'query': query,
-          'generation': generation,
-        })
+        score = self.answer_grade_chain.invoke(query, generation)
         grade = score.binary_score.lower()
       except Exception as e:
         print(e)

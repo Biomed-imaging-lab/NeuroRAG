@@ -1,6 +1,7 @@
 import re
+from langchain_core.runnables import Runnable
 
-class JsonExtractor:
+class JsonExtractor(Runnable):
   json_pattern = r'\{.*?\}'
 
   def invoke(self, input_data: str) -> str:

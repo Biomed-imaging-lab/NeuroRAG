@@ -29,10 +29,10 @@ prompt = PromptTemplate(
   partial_variables={'format_instructions': parser.get_format_instructions()},
 )
 
-ncbi_protein_retriever = NCBIRetriever(db='protein', k=3)
-
 class NCBIProteinChain:
   def __init__(self, llm) -> None:
+    retriever = NCBIRetriever(db='protein', k=3)
+
     retry_parser = RetryOutputParser.from_llm(
       parser=parser,
       llm=llm,
@@ -41,7 +41,7 @@ class NCBIProteinChain:
 
     self.chain = RunnableParallel(
         completion=prompt | llm | JsonExtractor(), prompt_value=prompt
-    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x)) | self.__query_extractor | ncbi_protein_retriever
+    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x)) | self.__query_extractor | retriever
 
   def __query_extractor(self, response: NCBIProteinSchema) -> str:
     return response.query
