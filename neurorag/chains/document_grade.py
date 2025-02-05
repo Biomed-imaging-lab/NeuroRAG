@@ -44,5 +44,5 @@ class DocumentGradeChain:
         completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
-  def invoke(self, query: str, doucment: str) -> str:
-    return self.chain.invoke({'query': query, 'doucment': doucment})
+  def invoke(self, query: str, document: str) -> str:
+    return self.chain.invoke({'query': query, 'document': document}).binary_score

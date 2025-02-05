@@ -36,13 +36,13 @@ class GenerationChain:
 
     gpt_llm = ChatOpenAI(model='gpt-4o', temperature=temperature)
     openbio_llm = Ollama(model='taozhiyuai/openbiollm-llama-3:70b_q2_k', temperature=temperature)
-    mistral_llm = ChatMistralAI(model='mistral-large-latest', temperature=temperature)
+    mistral_llm = Ollama(model='cniongolo/biomistral', temperature=temperature)
 
     gpt_chain = rag_prompt | gpt_llm | StrOutputParser()
     openbio_chain = rag_prompt | openbio_llm | StrOutputParser()
     mistral_chain = rag_prompt | mistral_llm | StrOutputParser()
 
-    fusing_chain = FusingChain(llm)
+    self.fusing_chain = FusingChain(llm)
 
     self.chain: RunnableSerializable = (
       {
@@ -50,12 +50,10 @@ class GenerationChain:
         'gpt_res': gpt_chain,
         'openbio_res': openbio_chain,
         'mistral_res': mistral_chain,
-      } | RunnableLambda(self.__combine_responses)
-      | fusing_chain
-      | RunnableLambda(self.__extract_final_response)
+      } | RunnableLambda(self.__fuse_responses)
     )
 
-  def __combine_responses(self, dict: FuseData):
+  def __fuse_responses(self, dict: FuseData, *args):
     query = dict['query']
 
     gpt_res = dict['gpt_res']
@@ -65,10 +63,9 @@ class GenerationChain:
     responses = [gpt_res, openbio_res, mistral_res]
     combined_responses = '\n'.join([f'Response:\n{r}' for r in responses])
 
-    return {'query': query, 'responses': combined_responses}
+    fused_repsonse = self.fusing_chain.invoke({'query': query, 'responses': combined_responses})
 
-  def __extract_final_response(self, response) -> str:
-    return response.final_response
+    return fused_repsonse
 
   def invoke(self, query: str, context: str, user_prompt = None) -> str:
     if user_prompt:

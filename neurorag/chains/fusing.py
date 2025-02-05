@@ -13,15 +13,14 @@ class FusingSchema(BaseModel):
 template = """
 You are an AI assistant tasked with combining multiple AI responses into a single, coherent answer.
 Merge the responses intelligently, keeping the most reliable information.
+Create a comprehensive, unified response that combines the best insights from all sources in json format.
+
+{format_instructions}
 
 Original query: {query}
 
 Individual responses:
 {responses}
-
-Create a comprehensive, unified response that combines the best insights from all sources.
-
-{format_instructions}
 """
 
 parser = PydanticOutputParser(pydantic_object=FusingSchema)
@@ -44,5 +43,5 @@ class FusingChain:
         completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
-  def invoke(self, query: str, responses: str) -> str:
-    return self.chain.invoke({'query': query, 'responses': responses})
+  def invoke(self, data: dict) -> str:
+    return self.chain.invoke(data).final_response

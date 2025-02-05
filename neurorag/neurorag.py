@@ -43,7 +43,7 @@ class GraphStateSchema(TypedDict):
   generations_number: int
 
 class NeuroRAG():
-  def __init__(self, temperature: int = 0, generation_prompt = None) -> None:
+  def __init__(self, temperature: float = 0, generation_prompt = None) -> None:
     self.temperature = temperature
     self.generation_prompt = generation_prompt
 
@@ -76,7 +76,7 @@ class NeuroRAG():
     self.ncbi_gene_db_chain = NCBIGeneChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=5)
-    self.generation_chain = GenerationChain(self.generation_prompt)
+    self.generation_chain = GenerationChain(self.llm, self.temperature, self.generation_prompt)
     self.hallucinations_chain = HallucinationsChain(self.llm)
     self.answer_grade_chain = AnswerGradeChain(self.llm)
 
@@ -155,8 +155,8 @@ class NeuroRAG():
     query = state['query']
 
     try:
-      res = self.route_chain.invoke(query)
-      specialized_sources = [src.strip().lower() for src in res.sources]
+      sources = self.route_chain.invoke(query)
+      specialized_sources = [source.strip().lower() for source in sources]
     except:
       specialized_sources = []
 
@@ -180,8 +180,7 @@ class NeuroRAG():
     query = state['query']
 
     try:
-      decomposition_answer = self.decomposition_chain.invoke(query)
-      subqueries = decomposition_answer.subqueries
+      subqueries = self.decomposition_chain.invoke(query)
       # Limit to a maximum of four subqueries
       subqueries = subqueries[:4]
     except Exception as e:
@@ -203,7 +202,7 @@ class NeuroRAG():
       generated_document = self.hyde_chain.invoke(query)
       generated_documents.append(generated_document)
 
-    return {'query': query, 'generated_documents': generated_documents}
+    return {'generated_documents': generated_documents}
 
   def vector_store_retriever_node(self, state: GraphStateSchema):
     generated_documents = state['generated_documents']
@@ -315,8 +314,7 @@ class NeuroRAG():
 
     for document in retrieved_documents:
       try:
-        score = self.document_grade_chain.invoke(rewritten_query, document)
-        grade = score.binary_score
+        grade = self.document_grade_chain.invoke(rewritten_query, document)
       except Exception as e:
         print(e)
         grade = 'no'
@@ -369,16 +367,14 @@ class NeuroRAG():
 
     try:
       context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
-      score = self.hallucinations_chain.invoke(generation, context)
-      grade = score.binary_score
+      grade = self.hallucinations_chain.invoke(generation, context)
     except Exception as e:
       print(e)
       grade = 'no'
 
     if grade == 'yes':
       try:
-        score = self.answer_grade_chain.invoke(query, generation)
-        grade = score.binary_score.lower()
+        grade = self.answer_grade_chain.invoke(query, generation)
       except Exception as e:
         print(e)
         grade = 'no'

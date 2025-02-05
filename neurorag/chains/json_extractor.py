@@ -4,10 +4,10 @@ from langchain_core.runnables import Runnable
 class JsonExtractor(Runnable):
   json_pattern = r'\{.*?\}'
 
-  def invoke(self, input_data: str) -> str:
-    match = re.search(JsonExtractor.json_pattern, input_data, re.DOTALL)
+  def invoke(self, input_data: str, *args) -> str:
+    matches = re.findall(JsonExtractor.json_pattern, input_data, re.DOTALL)
 
-    if match:
-      return match.group().strip().replace('\\\\', '\\')
+    if matches:
+      return matches[-1].strip().replace('\\\\', '\\')
 
     return input_data

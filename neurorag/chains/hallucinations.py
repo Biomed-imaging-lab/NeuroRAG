@@ -44,4 +44,4 @@ class HallucinationsChain:
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, generation: str, documents: str) -> str:
-    return self.chain.invoke({'generation': generation, 'documents': documents})
+    return self.chain.invoke({'generation': generation, 'documents': documents}).binary_score

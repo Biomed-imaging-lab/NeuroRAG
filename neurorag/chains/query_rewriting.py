@@ -42,4 +42,4 @@ class QueryRewritingChain:
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, query: str) -> str:
-    return self.chain.invoke({'query': query})
+    return self.chain.invoke({'query': query}).rewritten_query
