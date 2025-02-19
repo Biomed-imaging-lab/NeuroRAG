@@ -1,8 +1,20 @@
+import sys
+import os
+
+# Add the parent directory to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(
+  os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'neurorag'))
+)
+sys.path.append(
+  os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'neurorag', 'chains'))
+)
+
 import streamlit as st
-import pickle
-from neurorag.neurorag import NeuroRAG
 import warnings
 from dotenv import load_dotenv
+
+from neurorag.neurorag import NeuroRAG
 
 warnings.filterwarnings('ignore')
 load_dotenv()
@@ -34,7 +46,9 @@ with st.sidebar:
   )
 
 if 'messages' not in st.session_state:
-  st.session_state['messages'] = [{'role': 'assistant', 'content': 'How can I help you?'}]
+  st.session_state['messages'] = [
+    {'role': 'assistant', 'content': 'How can I help you?'}
+  ]
 
 for msg in st.session_state.messages:
   st.chat_message(msg['role']).write(msg['content'])
@@ -45,9 +59,17 @@ if prompt := st.chat_input():
 
   with st.spinner('Thinking...'):
     response = app.invoke(prompt)
+
     content = response['generation']
     documents = response['documents']
-    sources = [document.metadata['source'] for document in documents]
-    content += '\n\nSources:\n' + '\n'.join(map(lambda src: f'- {src}', sources))
+    sources = [
+      document.metadata['source']
+      for document in documents
+      if 'source' in document.metadata
+    ]
+
+    if sources:
+      content += '\n\nSources:\n' + '\n'.join(map(lambda src: f'- {src}', sources))
+
     st.session_state.messages.append({'role': 'assistant', 'content': content})
     st.chat_message('assistant').write(content)

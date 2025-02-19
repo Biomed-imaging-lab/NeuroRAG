@@ -9,7 +9,11 @@ from langchain.embeddings.cache import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
 from langchain_community.llms import Ollama
 from langgraph.graph import START, END, StateGraph
-from langchain_community.retrievers import PubMedRetriever, ArxivRetriever, BM25Retriever
+from langchain_community.retrievers import (
+  PubMedRetriever,
+  ArxivRetriever,
+  BM25Retriever,
+)
 from langchain_community.tools.tavily_search import TavilySearchResults
 
 from chains.route import RouteChain
@@ -23,6 +27,7 @@ from chains.decomposition import DecompositionChain
 from chains.ncbi_protein import NCBIProteinChain
 from chains.ncbi_gene import NCBIGeneChain
 from chains.generation import GenerationChain
+
 
 class GraphStateSchema(TypedDict):
   query: str
@@ -42,8 +47,9 @@ class GraphStateSchema(TypedDict):
   generation: str
   generations_number: int
 
-class NeuroRAG():
-  def __init__(self, temperature: float = 0, generation_prompt = None) -> None:
+
+class NeuroRAG:
+  def __init__(self, temperature: float = 0, generation_prompt=None) -> None:
     self.temperature = temperature
     self.generation_prompt = generation_prompt
 
@@ -61,7 +67,7 @@ class NeuroRAG():
     self.vector_store = Chroma(
       collection_name='neurorag',
       embedding_function=self.embeddings,
-      persist_directory='./chroma_db',
+      persist_directory='../chroma_db',
     )
     self.vector_store_retriever = self.vector_store.as_retriever()
     self.pub_med_retriever = PubMedRetriever()
@@ -76,13 +82,17 @@ class NeuroRAG():
     self.ncbi_gene_db_chain = NCBIGeneChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=5)
-    self.generation_chain = GenerationChain(self.llm, self.temperature, self.generation_prompt)
+    self.generation_chain = GenerationChain(
+      self.llm, self.temperature, self.generation_prompt
+    )
     self.hallucinations_chain = HallucinationsChain(self.llm)
     self.answer_grade_chain = AnswerGradeChain(self.llm)
 
     workflow = StateGraph(GraphStateSchema)
 
-    workflow.add_node('determine_specialized_sources', self.determine_specialized_src_node)
+    workflow.add_node(
+      'determine_specialized_sources', self.determine_specialized_src_node
+    )
 
     workflow.add_node('generate_step_back_query', self.generate_step_back_query_node)
     workflow.add_node('generate_rewritten_query', self.generate_rewritten_query_node)
@@ -162,7 +172,9 @@ class NeuroRAG():
 
     return {'specialized_sources': specialized_sources}
 
-  def route_query_node(self, state: GraphStateSchema) -> Literal['websearch', 'specialized_sources']:
+  def route_query_node(
+    self, state: GraphStateSchema
+  ) -> Literal['websearch', 'specialized_sources']:
     sources = state['specialized_sources']
     return 'websearch' if len(sources) == 0 else 'specialized_sources'
 
@@ -184,7 +196,7 @@ class NeuroRAG():
       # Limit to a maximum of four subqueries
       subqueries = subqueries[:4]
     except Exception as e:
-      print(e)
+      print('generate_subqueries_node()', e)
       subqueries = []
 
     return {'subqueries': subqueries}
@@ -219,37 +231,45 @@ class NeuroRAG():
     return {'documents': documents}
 
   def pub_med_retriever_node(self, state: GraphStateSchema):
-    generated_documents = state['generated_documents']
     specialized_sources = state['specialized_sources']
+    query = state['query']
+    step_back_query = state['step_back_query']
+    rewritten_query = state['rewritten_query']
+    subqueries = state['subqueries']
 
     if 'pubmed' not in specialized_sources:
       return {'documents': []}
 
+    queries = [query, step_back_query, rewritten_query, *subqueries]
     documents = []
 
-    for generated_document in generated_documents:
+    for query in queries:
       try:
-        documents.extend(self.pub_med_retriever.invoke(generated_document))
+        documents.extend(self.pub_med_retriever.invoke(query))
       except Exception as e:
-        print(e)
+        print('pub_med_retriever_node()', e)
         pass
 
     return {'documents': documents}
 
   def arxiv_retriever_node(self, state: GraphStateSchema):
-    generated_documents = state['generated_documents']
     specialized_sources = state['specialized_sources']
+    query = state['query']
+    step_back_query = state['step_back_query']
+    rewritten_query = state['rewritten_query']
+    subqueries = state['subqueries']
 
     if 'arxiv' not in specialized_sources:
       return {'documents': []}
 
+    queries = [query, step_back_query, rewritten_query, *subqueries]
     documents = []
 
-    for generated_document in generated_documents:
+    for query in queries:
       try:
-        documents.extend(self.arxiv_retriever.invoke(generated_document))
+        documents.extend(self.arxiv_retriever.invoke(query))
       except Exception as e:
-        print(e)
+        print('arxiv_retriever_node()', e)
         pass
 
     return {'documents': documents}
@@ -272,7 +292,7 @@ class NeuroRAG():
       try:
         documents.extend(self.ncbi_protein_db_chain.invoke(query))
       except Exception as e:
-        print(e)
+        print('ncbi_protein_db_retriever_node', e)
         pass
 
     return {'documents': documents}
@@ -295,7 +315,7 @@ class NeuroRAG():
       try:
         documents.extend(self.ncbi_gene_db_chain.invoke(query))
       except Exception as e:
-        print(e)
+        print('ncbi_gene_db_retriever_node()', e)
         pass
 
     return {'documents': documents}
@@ -316,7 +336,7 @@ class NeuroRAG():
       try:
         grade = self.document_grade_chain.invoke(rewritten_query, document)
       except Exception as e:
-        print(e)
+        print('grade_documents_node()', e)
         grade = 'no'
 
       if grade.lower() == 'yes':
@@ -339,9 +359,12 @@ class NeuroRAG():
 
     try:
       web_results = self.web_search_chain.invoke(query)
-      documents = [Document(page_content=result['content'], metadata={'source': result['url']}) for result in web_results]
+      documents = [
+        Document(page_content=result['content'], metadata={'source': result['url']})
+        for result in web_results
+      ]
     except Exception as e:
-      print(e)
+      print('decide_to_generate_node()', e)
       documents = []
 
     return {'documents': documents}
@@ -351,12 +374,16 @@ class NeuroRAG():
     documents = state['documents']
     generations_number = state.get('generations_number', 0)
 
-    context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
+    context = (
+      '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
+    )
     generation = self.generation_chain.invoke(query, context)
 
     return {'generation': generation, 'generations_number': generations_number + 1}
 
-  def grade_generation_node(self, state: GraphStateSchema) -> Literal['useful', 'not useful', 'not supported']:
+  def grade_generation_node(
+    self, state: GraphStateSchema
+  ) -> Literal['useful', 'not useful', 'not supported']:
     query = state['query']
     documents = state['documents']
     generation = state['generation']
@@ -366,17 +393,19 @@ class NeuroRAG():
       return 'useful'
 
     try:
-      context = '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
+      context = (
+        '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
+      )
       grade = self.hallucinations_chain.invoke(generation, context)
     except Exception as e:
-      print(e)
+      print('grade_generation_node() hallucinations_chain', e)
       grade = 'no'
 
     if grade == 'yes':
       try:
         grade = self.answer_grade_chain.invoke(query, generation)
       except Exception as e:
-        print(e)
+        print('grade_generation_node() answer_grade_chain', e)
         grade = 'no'
 
       if grade == 'yes':

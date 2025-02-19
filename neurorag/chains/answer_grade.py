@@ -43,5 +43,5 @@ class AnswerGradeChain:
         completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
-  def invoke(self, query: str) -> str:
-    return self.chain.invoke({'query': query}).binary_score
+  def invoke(self, query: str, generation: str) -> str:
+    return self.chain.invoke({'query': query, 'generation': generation}).binary_score
