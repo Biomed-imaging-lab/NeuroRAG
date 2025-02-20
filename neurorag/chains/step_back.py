@@ -7,8 +7,12 @@ from langchain_core.runnables import RunnableLambda, RunnableParallel
 
 from json_extractor import JsonExtractor
 
+
 class StepBackSchema(BaseModel):
-  step_back: str = Field(description="Given the original query, generate a step-back query that is more general and can help retrieve relevant background information.")
+  step_back: str = Field(
+    description='Given the original query, generate a step-back query that is more general and can help retrieve relevant background information.'
+  )
+
 
 template = """
 You are an AI assistant tasked with generating broader, more general queries to improve context retrieval in a RAG system.
@@ -29,6 +33,7 @@ prompt = PromptTemplate(
   partial_variables={'format_instructions': parser.get_format_instructions()},
 )
 
+
 class StepBackChain:
   def __init__(self, llm):
     retry_parser = RetryOutputParser.from_llm(
@@ -38,8 +43,8 @@ class StepBackChain:
     )
 
     self.chain = RunnableParallel(
-        completion=prompt | llm | JsonExtractor(), prompt_value=prompt
+      completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, query: str) -> str:
-    return self.chain.invoke({'query': query})
+    return self.chain.invoke({'query': query}).step_back
