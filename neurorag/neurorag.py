@@ -50,15 +50,18 @@ class GraphStateSchema(TypedDict):
 
 class NeuroRAG:
   def __init__(
-    self, temperature: float = 0, debug: bool = False, generation_prompt=None
+    self,
+    model='llama3.3',
+    temperature: float = 0,
+    debug: bool = False,
+    generation_prompt=None,
   ) -> None:
     self.temperature = temperature
     self.debug = debug
     self.generation_prompt = generation_prompt
+    self.llm = Ollama(model=model, temperature=self.temperature)
 
   def compile(self) -> None:
-    self.llm = Ollama(model='llama3.3', temperature=self.temperature)
-
     embeddings = OllamaEmbeddings(model='llama3.1')
     embeddings_store = LocalFileStore('./.embeddings_cache')
     self.embeddings = CacheBackedEmbeddings.from_bytes_store(
