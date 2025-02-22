@@ -49,12 +49,15 @@ class GraphStateSchema(TypedDict):
 
 
 class NeuroRAG:
-  def __init__(self, temperature: float = 0, generation_prompt=None) -> None:
+  def __init__(
+    self, temperature: float = 0, debug: bool = False, generation_prompt=None
+  ) -> None:
     self.temperature = temperature
+    self.debug = debug
     self.generation_prompt = generation_prompt
 
   def compile(self) -> None:
-    self.llm = Ollama(model='llama3.1', temperature=self.temperature)
+    self.llm = Ollama(model='llama3.3', temperature=self.temperature)
 
     embeddings = OllamaEmbeddings(model='llama3.1')
     embeddings_store = LocalFileStore('./.embeddings_cache')
@@ -164,6 +167,9 @@ class NeuroRAG:
   def determine_specialized_src_node(self, state):
     query = state['query']
 
+    if self.debug:
+      print('---DETERMINE SPECIALIZED SOURCES---')
+
     try:
       sources = self.route_chain.invoke(query)
       specialized_sources = [source.strip().lower() for source in sources]
@@ -176,27 +182,42 @@ class NeuroRAG:
     self, state: GraphStateSchema
   ) -> Literal['websearch', 'specialized_sources']:
     sources = state['specialized_sources']
+
+    if self.debug:
+      print('---ROUTE QUESTION---')
+
     return 'websearch' if len(sources) == 0 else 'specialized_sources'
 
   def generate_step_back_query_node(self, state: GraphStateSchema):
     query = state['query']
+
+    if self.debug:
+      print('---GENERATE STEP-BACK QUERY---')
+
     step_back_query = self.step_back_chain.invoke(query)
     return {'step_back_query': step_back_query}
 
   def generate_rewritten_query_node(self, state: GraphStateSchema):
     query = state['query']
+
+    if self.debug:
+      print('---GENERATE REWRITTEN QUERY---')
+
     rewritten_query = self.query_rewrite_chain.invoke(query)
     return {'rewritten_query': rewritten_query}
 
   def generate_subqueries_node(self, state: GraphStateSchema):
     query = state['query']
 
+    if self.debug:
+      print('---GENERATE SUBQUERIES---')
+
     try:
       subqueries = self.decomposition_chain.invoke(query)
       # Limit to a maximum of four subqueries
       subqueries = subqueries[:4]
     except Exception as e:
-      print('generate_subqueries_node()', e)
+      print('generate_subqueries_node', e)
       subqueries = []
 
     return {'subqueries': subqueries}
@@ -206,6 +227,9 @@ class NeuroRAG:
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
+
+    if self.debug:
+      print('---GENERATE HYDE DOCUMENTS---')
 
     queries = [query, step_back_query, rewritten_query, *subqueries]
     generated_documents = []
@@ -222,6 +246,9 @@ class NeuroRAG:
 
     if 'vectorstore' not in specialized_sources:
       return {'documents': []}
+
+    if self.debug:
+      print('---RETRIEVE FROM VECTOR STORE---')
 
     documents = []
 
@@ -240,6 +267,9 @@ class NeuroRAG:
     if 'pubmed' not in specialized_sources:
       return {'documents': []}
 
+    if self.debug:
+      print('---RETRIEVE FROM PUBMED---')
+
     queries = [query, step_back_query, rewritten_query, *subqueries]
     documents = []
 
@@ -247,8 +277,11 @@ class NeuroRAG:
       try:
         documents.extend(self.pub_med_retriever.invoke(query))
       except Exception as e:
-        print('pub_med_retriever_node()', e)
+        print('pub_med_retriever_node', e)
         pass
+
+    for document in documents:
+      document.metadata['source'] = document.metadata['Title']
 
     return {'documents': documents}
 
@@ -262,6 +295,9 @@ class NeuroRAG:
     if 'arxiv' not in specialized_sources:
       return {'documents': []}
 
+    if self.debug:
+      print('---RETRIEVE FROM ARXIV---')
+
     queries = [query, step_back_query, rewritten_query, *subqueries]
     documents = []
 
@@ -269,8 +305,10 @@ class NeuroRAG:
       try:
         documents.extend(self.arxiv_retriever.invoke(query))
       except Exception as e:
-        print('arxiv_retriever_node()', e)
+        print('arxiv_retriever_node', e)
         pass
+
+    print('arxiv documents', documents)
 
     return {'documents': documents}
 
@@ -279,6 +317,9 @@ class NeuroRAG:
 
     if 'ncbi_protein' not in specialized_sources:
       return {'documents': []}
+
+    if self.debug:
+      print('---RETRIEVE FROM NCBI PROTEIN DB---')
 
     query = state['query']
     step_back_query = state['step_back_query']
@@ -303,6 +344,9 @@ class NeuroRAG:
     if 'ncbi_gene' not in specialized_sources:
       return {'documents': []}
 
+    if self.debug:
+      print('---RETRIEVE FROM NCBI GENE DB---')
+
     query = state['query']
     step_back_query = state['step_back_query']
     rewritten_query = state['rewritten_query']
@@ -315,7 +359,7 @@ class NeuroRAG:
       try:
         documents.extend(self.ncbi_gene_db_chain.invoke(query))
       except Exception as e:
-        print('ncbi_gene_db_retriever_node()', e)
+        print('ncbi_gene_db_retriever_node', e)
         pass
 
     return {'documents': documents}
@@ -323,6 +367,9 @@ class NeuroRAG:
   def grade_documents_node(self, state: GraphStateSchema):
     rewritten_query = state['rewritten_query']
     documents = state['documents']
+
+    if self.debug:
+      print('---GRADE DOCUMENTs---')
 
     if len(documents) == 0:
       return {'documents': [], 'web_search': True}
@@ -336,13 +383,15 @@ class NeuroRAG:
       try:
         grade = self.document_grade_chain.invoke(rewritten_query, document)
       except Exception as e:
-        print('grade_documents_node()', e)
+        print('grade_documents_node', e)
         grade = 'no'
 
       if grade.lower() == 'yes':
         filtered_documents.append(document)
 
     filtered_documents = filtered_documents[:10]
+
+    print(f'---FINAL DOCUMENTS NUMBER: {len(filtered_documents)}---')
 
     state['documents'].clear()
     return {
@@ -352,10 +401,24 @@ class NeuroRAG:
 
   def decide_to_generate_node(self, state: GraphStateSchema):
     web_search = state['web_search']
-    return 'websearch' if web_search else 'generate'
+
+    if self.debug:
+      print('---ASSESS GRADED DOCUMENTS---')
+
+    if web_search:
+      print(
+        '---DECISION: ALL DOCUMENTS ARE NOT RELEVANT TO QUESTION, INCLUDE WEB SEARCH---'
+      )
+      return 'websearch'
+    else:
+      print('---DECISION: GENERATE---')
+      return 'generate'
 
   def web_search_node(self, state: GraphStateSchema):
     query = state['query']
+
+    if self.debug:
+      print('---WEB SEARCH---')
 
     try:
       web_results = self.web_search_chain.invoke(query)
@@ -364,7 +427,7 @@ class NeuroRAG:
         for result in web_results
       ]
     except Exception as e:
-      print('decide_to_generate_node()', e)
+      print('decide_to_generate_node', e)
       documents = []
 
     return {'documents': documents}
@@ -374,10 +437,13 @@ class NeuroRAG:
     documents = state['documents']
     generations_number = state.get('generations_number', 0)
 
+    if self.debug:
+      print('---GENERATE---')
+
     context = (
       '\n\n' + '\n\n'.join(map(lambda doc: doc.page_content, documents)) + '\n\n'
     )
-    generation = self.generation_chain.invoke(query, context)
+    generation = self.generation_chain.invoke(query, context, self.generation_prompt)
 
     return {'generation': generation, 'generations_number': generations_number + 1}
 
@@ -389,6 +455,9 @@ class NeuroRAG:
     generation = state['generation']
     generations_number = state['generations_number']
 
+    if self.debug:
+      print('---GRADE GENERATION---')
+
     if generations_number >= 2:
       return 'useful'
 
@@ -398,19 +467,23 @@ class NeuroRAG:
       )
       grade = self.hallucinations_chain.invoke(generation, context)
     except Exception as e:
-      print('grade_generation_node() hallucinations_chain', e)
+      print('grade_generation_node', e)
       grade = 'no'
 
     if grade == 'yes':
+      print('---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---')
       try:
         grade = self.answer_grade_chain.invoke(query, generation)
       except Exception as e:
-        print('grade_generation_node() answer_grade_chain', e)
+        print('grade_generation_node', e)
         grade = 'no'
 
       if grade == 'yes':
+        print('---DECISION: GENERATION ADDRESSES QUESTION---')
         return 'useful'
       else:
+        print('---DECISION: GENERATION DOES NOT ADDRESS QUESTION---')
         return 'not useful'
     else:
+      print('---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RETRY---')
       return 'not supported'
