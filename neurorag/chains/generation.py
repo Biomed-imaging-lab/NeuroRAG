@@ -34,20 +34,16 @@ Answer:
 
 
 class GenerationChain:
-  def __init__(self, llm, temperature: float = 0, user_prompt=None) -> None:
-    self.user_prompt = user_prompt
-
-    rag_prompt = self.user_prompt or PromptTemplate.from_template(template)
-
+  def __init__(self, llm, temperature: float = 0) -> None:
     gpt_llm = ChatOpenAI(model='gpt-4o', temperature=temperature)
     openbio_llm = Ollama(
       model='taozhiyuai/openbiollm-llama-3:70b_q2_k', temperature=temperature
     )
     mistral_llm = Ollama(model='cniongolo/biomistral', temperature=temperature)
 
-    gpt_chain = rag_prompt | gpt_llm | StrOutputParser()
-    openbio_chain = rag_prompt | openbio_llm | StrOutputParser()
-    mistral_chain = rag_prompt | mistral_llm | StrOutputParser()
+    gpt_chain = gpt_llm | StrOutputParser()
+    openbio_chain = openbio_llm | StrOutputParser()
+    mistral_chain = mistral_llm | StrOutputParser()
 
     self.fusing_chain = FusingChain(llm)
 
@@ -59,7 +55,7 @@ class GenerationChain:
     #     'mistral_res': mistral_chain,
     #   } | RunnableLambda(self.__fuse_responses)
     # )
-    self.chain: RunnableSerializable = rag_prompt | StrOutputParser()
+    self.chain: RunnableSerializable = gpt_chain
 
   def __fuse_responses(self, dict: FuseData, *args):
     query = dict['query']
@@ -78,7 +74,7 @@ class GenerationChain:
     return fused_repsonse
 
   def invoke(self, query: str, context: str, user_prompt=None) -> str:
-    if user_prompt:
-      self.user_prompt = user_prompt
+    rag_prompt = user_prompt or PromptTemplate.from_template(template)
 
-    return self.chain.invoke({'query': query, 'context': context})
+    return (rag_prompt | self.chain).invoke({'query': query, 'context': context})
+    # return (rag_prompt | self.chain).invoke({'query': query})
