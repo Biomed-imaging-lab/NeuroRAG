@@ -7,8 +7,10 @@ from langchain_core.runnables import RunnableLambda, RunnableParallel
 
 from json_extractor import JsonExtractor
 
+
 class AnswerGradeSchema(BaseModel):
   binary_score: str = Field(description="Answer addresses the question, 'yes' or 'no'")
+
 
 template = """
 You are a grader assessing whether an answer addresses / resolves a question. \n
@@ -31,6 +33,7 @@ prompt = PromptTemplate(
   partial_variables={'format_instructions': parser.get_format_instructions()},
 )
 
+
 class AnswerGradeChain:
   def __init__(self, llm):
     retry_parser = RetryOutputParser.from_llm(
@@ -40,7 +43,7 @@ class AnswerGradeChain:
     )
 
     self.chain = RunnableParallel(
-        completion=prompt | llm | JsonExtractor(), prompt_value=prompt
+      completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, query: str, generation: str) -> str:

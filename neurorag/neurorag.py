@@ -43,6 +43,7 @@ class GraphStateSchema(TypedDict):
   documents: Annotated[list, operator.add]
 
   web_search: bool
+  web_results: list[Document]
 
   generation: str
   generations_number: int
@@ -55,10 +56,12 @@ class NeuroRAG:
     temperature: float = 0,
     debug: bool = False,
     generation_prompt=None,
+    max_retries: int = 3,
   ) -> None:
     self.temperature = temperature
     self.debug = debug
     self.generation_prompt = generation_prompt
+    self.max_retries = max_retries
     self.llm = Ollama(model=model, temperature=self.temperature)
 
   def compile(self) -> None:
@@ -87,7 +90,7 @@ class NeuroRAG:
     self.ncbi_protein_db_chain = NCBIProteinChain(self.llm)
     self.ncbi_gene_db_chain = NCBIGeneChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
-    self.web_search_chain = TavilySearchResults(k=5)
+    self.web_search_chain = TavilySearchResults(k=self.max_retries * 3)
     self.generation_chain = GenerationChain(self.llm, self.temperature)
     self.hallucinations_chain = HallucinationsChain(self.llm)
     self.answer_grade_chain = AnswerGradeChain(self.llm)
@@ -148,7 +151,7 @@ class NeuroRAG:
         'generate': 'generate',
       },
     )
-    workflow.add_edge('websearch', 'generate')
+    workflow.add_edge('websearch', 'grade_documents')
     workflow.add_conditional_edges(
       'generate',
       self.grade_generation_node,
@@ -426,7 +429,7 @@ class NeuroRAG:
     if web_search:
       if self.debug:
         print(
-          '---DECISION: ALL DOCUMENTS ARE NOT RELEVANT TO QUESTION, INCLUDE WEB SEARCH---'
+          '---DECISION: SOME DOCUMENTS ARE NOT RELEVANT TO QUESTION, INCLUDE WEB SEARCH---'
         )
       return 'websearch'
     else:
@@ -435,23 +438,28 @@ class NeuroRAG:
       return 'generate'
 
   def web_search_node(self, state: GraphStateSchema):
-    query = state['query']
+    query: str = state['query']
+    web_results: list[Document] = state['web_results']
+    generations_number: int = state.get('generations_number', 0)
 
     if self.debug:
       print('---WEB SEARCH---')
 
-    try:
-      web_results = self.web_search_chain.invoke(query)
-      documents = [
-        Document(page_content=result['content'], metadata={'source': result['url']})
-        for result in web_results
-      ]
-    except Exception as e:
-      if self.debug:
-        print('decide_to_generate_node', e)
-      documents = []
+    if not web_results:
+      try:
+        raw_web_results = self.web_search_chain.invoke(query)
+        web_results = [
+          Document(page_content=result['content'], metadata={'source': result['url']})
+          for result in raw_web_results
+        ]
+      except Exception as e:
+        if self.debug:
+          print('web_search_node', e)
+        web_results = []
 
-    return {'documents': documents}
+    new_documents = web_results[generations_number * 3 : generations_number * 3 + 3]
+
+    return {'documents': new_documents, 'web_results': web_results}
 
   def generate_node(self, state: GraphStateSchema):
     query = state['query']
@@ -461,9 +469,7 @@ class NeuroRAG:
     if self.debug:
       print('---GENERATE---')
 
-    context = (
-      '\n\n'.join(map(lambda doc: doc.page_content, documents))
-    )
+    context = '\n\n'.join(map(lambda doc: doc.page_content, documents))
     generation = self.generation_chain.invoke(query, context, self.generation_prompt)
 
     return {'generation': generation, 'generations_number': generations_number + 1}
@@ -479,7 +485,7 @@ class NeuroRAG:
     if self.debug:
       print('---GRADE GENERATION---')
 
-    if generations_number >= 2:
+    if generations_number >= self.max_retries:
       return 'useful'
 
     try:
