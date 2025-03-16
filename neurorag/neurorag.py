@@ -56,7 +56,7 @@ class NeuroRAG:
     temperature: float = 0,
     debug: bool = False,
     generation_prompt=None,
-    max_retries: int = 3,
+    max_retries: int = 2,
   ) -> None:
     self.temperature = temperature
     self.debug = debug
