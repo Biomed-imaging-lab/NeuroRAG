@@ -151,7 +151,7 @@ class NeuroRAG:
         'generate': 'generate',
       },
     )
-    workflow.add_edge('websearch', 'grade_documents')
+    workflow.add_edge('websearch', 'generate')
     workflow.add_conditional_edges(
       'generate',
       self.grade_generation_node,
@@ -439,7 +439,7 @@ class NeuroRAG:
 
   def web_search_node(self, state: GraphStateSchema):
     query: str = state['query']
-    web_results: list[Document] = state['web_results']
+    web_results: list[Document] = state.get('web_results', [])
     generations_number: int = state.get('generations_number', 0)
 
     if self.debug:
