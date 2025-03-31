@@ -57,7 +57,7 @@ with st.sidebar:
     disabled=True,
   )
 
-chat_column, document_column = st.columns(2, border=True)
+chat_column, document_column = st.columns(2)
 
 with chat_column:
   if 'messages' not in st.session_state:
@@ -109,13 +109,15 @@ with document_column:
       if 'source' in document.metadata
       and not document.metadata['source'].startswith('http')
     ]
-    tabs = st.tabs(sources)
 
-    for index, tab in enumerate(tabs):
-      with tab:
-        source = sources[index]
-        file_path = f'../documents/{source}'
-        with open(file_path, 'rb') as f:
-          base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-        pdf_iframe = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
-        st.markdown(pdf_iframe, unsafe_allow_html=True)
+    if len(sources):
+      tabs = st.tabs(sources)
+
+      for index, tab in enumerate(tabs):
+        with tab:
+          source = sources[index]
+          file_path = f'../documents/{source}'
+          with open(file_path, 'rb') as f:
+            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+          pdf_iframe = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
+          st.markdown(pdf_iframe, unsafe_allow_html=True)
