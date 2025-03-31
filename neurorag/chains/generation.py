@@ -47,15 +47,12 @@ class GenerationChain:
 
     self.fusing_chain = FusingChain(llm)
 
-    # self.chain: RunnableSerializable = (
-    #   {
-    #     'query': itemgetter('query'),
-    #     'gpt_res': gpt_chain,
-    #     'openbio_res': openbio_chain,
-    #     'mistral_res': mistral_chain,
-    #   } | RunnableLambda(self.__fuse_responses)
-    # )
-    self.chain: RunnableSerializable = gpt_chain
+    self.chain: RunnableSerializable = {
+      'query': itemgetter('query'),
+      'gpt_res': gpt_chain,
+      'openbio_res': openbio_chain,
+      'mistral_res': mistral_chain,
+    } | RunnableLambda(self.__fuse_responses)
 
   def __fuse_responses(self, dict: FuseData, *args):
     query = dict['query']
@@ -65,16 +62,15 @@ class GenerationChain:
     mistral_res = dict['mistral_res']
 
     responses = [gpt_res, openbio_res, mistral_res]
-    combined_responses = '\n'.join([f'Response:\n{r}' for r in responses])
+    combined_responses = '\n\n'.join(responses)
 
-    fused_repsonse = self.fusing_chain.invoke(
+    fused_response = self.fusing_chain.invoke(
       {'query': query, 'responses': combined_responses}
     )
 
-    return fused_repsonse
+    return fused_response
 
   def invoke(self, query: str, context: str, user_prompt=None) -> str:
     rag_prompt = user_prompt or PromptTemplate.from_template(template)
 
     return (rag_prompt | self.chain).invoke({'query': query, 'context': context})
-    # return (rag_prompt | self.chain).invoke({'query': query})
