@@ -27,10 +27,12 @@ title = '🧠 NeuroRAG Chatbot'
 
 st.set_page_config(page_title=title)
 
+default_messages = [
+  {'role': 'assistant', 'content': 'How can I help you?', 'response': None}
+]
+
 if 'messages' not in st.session_state:
-  st.session_state['messages'] = [
-    {'role': 'assistant', 'content': 'How can I help you?', 'response': None}
-  ]
+  st.session_state['messages'] = default_messages
 if 'is_documents_preview' not in st.session_state:
   st.session_state['is_documents_preview'] = False
 
@@ -48,7 +50,7 @@ with st.sidebar:
       disabled=is_reset_button_disabled,
       use_container_width=True,
     ):
-      del st.session_state['messages']
+      st.session_state['messages'] = default_messages
 
   with preview_col:
 
