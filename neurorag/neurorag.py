@@ -52,7 +52,7 @@ class GraphStateSchema(TypedDict):
 class NeuroRAG:
   def __init__(
     self,
-    model='llama3.3',
+    model='llama3.1',
     temperature: float = 0,
     debug: bool = False,
     generation_prompt=None,
@@ -179,6 +179,9 @@ class NeuroRAG:
       specialized_sources = [source.strip().lower() for source in sources]
     except:
       specialized_sources = []
+
+    if self.debug:
+      print(f'---SELECTED SOURCES: {specialized_sources}---')
 
     return {'specialized_sources': specialized_sources}
 
@@ -499,7 +502,8 @@ class NeuroRAG:
       grade = 'no'
 
     if grade == 'yes':
-      print('---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---')
+      if self.debug:
+        print('---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---')
       try:
         grade = self.answer_grade_chain.invoke(query, generation)
       except Exception as e:
@@ -508,10 +512,12 @@ class NeuroRAG:
         grade = 'no'
 
       if grade == 'yes':
-        print('---DECISION: GENERATION ADDRESSES QUESTION---')
+        if self.debug:
+          print('---DECISION: GENERATION ADDRESSES QUESTION---')
         return 'useful'
       else:
-        print('---DECISION: GENERATION DOES NOT ADDRESS QUESTION---')
+        if self.debug:
+          print('---DECISION: GENERATION DOES NOT ADDRESS QUESTION---')
         return 'not useful'
     else:
       if self.debug:
