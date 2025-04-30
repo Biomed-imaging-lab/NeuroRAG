@@ -9,24 +9,18 @@ from json_extractor import JsonExtractor
 
 
 class FusingSchema(BaseModel):
-  correct_answer: str = Field(
-    description='Based on the question and the provided context, choose the most accurate letter among [A, B, C, D].'
-  )
+  final_response: str = Field(final_response='The final fused response.')
 
 
 template = """
 ### Instructions
 
 As an expert AI assistant in synthesizing information, your task is to merge multiple AI-generated responses into a single, coherent, and comprehensive answer.
-
-1. **Evaluate Responses:** Analyze each response for reliability, relevance, and commonality.
-2. **Identify Common Answers:** Determine the most frequently occurring answer or insight across all responses.
-3. **Synthesize Information:** Merge the common answers into a unified response.
-4. **Format the Response:** Present the final answer in JSON format, ensuring clarity and coherence.
+Select the most prevalent answer and return it as the final output. Keep the answer verbose, with a minimum of three paragraphs.
 
 ### Context
 
-Original Query:
+Original query:
 {query}
 
 ### Individual Responses
