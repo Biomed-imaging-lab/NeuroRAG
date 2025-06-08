@@ -1,3 +1,4 @@
+import os
 from operator import itemgetter
 from typing import TypedDict
 
@@ -5,13 +6,16 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda
 from langchain_openai import ChatOpenAI
 from langchain_mistralai.chat_models import ChatMistralAI
-from langchain_community.llms import Ollama
+from langchain_ollama.llms import OllamaLLM as Ollama
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableSerializable
 from fusing import FusingChain, FusingSchema
 
 from json_extractor import JsonExtractor
 from langchain_core.output_parsers import PydanticOutputParser
+
+
+ollama_server_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 
 
 class FuseData(TypedDict):
@@ -44,14 +48,21 @@ class GenerationChain:
     self.gpt_llm = ChatOpenAI(model='gpt-4o', temperature=temperature)
     try:
       self.mistral_llm = ChatMistralAI(
-        model='mistral-large-latest', temperature=temperature
+        model='mistral-large-latest',
+        temperature=temperature,
       )
     except:
       # Fallback
       self.mistral_llm = Ollama(
-        model='mistral-small3.1', temperature=temperature
+        model='mistral-small3.1',
+        temperature=temperature,
+        bese_url=ollama_server_url,
       )
-    self.biomistral_llm = Ollama(model='cniongolo/biomistral', temperature=temperature)
+    self.biomistral_llm = Ollama(
+      model='cniongolo/biomistral',
+      temperature=temperature,
+      bese_url=ollama_server_url,
+    )
 
   def __fuse_responses(self, dict: FuseData, *args):
     query = dict['query']

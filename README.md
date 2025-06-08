@@ -4,6 +4,7 @@
 	<!--TODO: stament for the paper link (doi) -->
 </p>
 
+
 <p align="center">
     <img src="https://img.shields.io/github/v/release/Biomed-imaging-lab/NeuroRAG" alt="release">
 	<img src="https://img.shields.io/github/license/Biomed-imaging-lab/NeuroRAG?style=default&logo=opensourceinitiative&logoColor=white&color=orange" alt="license"> 
@@ -15,13 +16,13 @@
 	</a>
 	<br>
 </p>
+	<img src="https://img.shields.io/github/last-commit/Biomed-imaging-lab/NeuroRAG?style=default&logo=git&logoColor=white&color=0080ff" alt="last-commit">
 
 <div align="center">
 <b>Repository statistics:</b>
 <p align="center">
-	<img src="https://img.shields.io/github/repo-size/Biomed-imaging-lab/NeuroRag" alt="repo size">
 	<img src="https://img.shields.io/github/last-commit/Biomed-imaging-lab/NeuroRAG?style=default&logo=git&logoColor=white&color=0080ff" alt="last-commit">
-	<img src="https://img.shields.io/github/issues/Biomed-imaging-lab/NeuroRag?style=default&logo=git&logoColor=white&color=0080ff" alt="issues">
+	<img src="https://img.shields.io/github/issues/Biomed-imaging-lab/NeuroRAG?style=default&logo=git&logoColor=white&color=0080ff" alt="issues">
 	<img src="https://img.shields.io/github/languages/top/Biomed-imaging-lab/NeuroRAG?style=default&color=0080ff" alt="repo-top-language">
 	<img src="https://img.shields.io/github/languages/count/Biomed-imaging-lab/NeuroRAG?style=default&color=0080ff" alt="repo-language-count">
 </p>
@@ -459,10 +460,14 @@ Install NeuroRAG using one of the following methods:
 ```
 
 ###  Usage
-Run NeuroRAG using the following command:
+Run NeuroRAG streamlit app using the following command:
 
 ```sh
-❯ streamlit run apps/app.py
+❯ docker build -t neurorag-app .
+```
+
+```sh
+❯ docker run -p 8501:8501 --add-host=host.docker.internal:host-gateway -e HTTP_PROXY="http://host.docker.internal:2080" -e HTTPS_PROXY="http://host.docker.internal:2080" -e OLLAMA_HOST="http://host.docker.internal:11434" -e NO_PROXY="localhost,127.0.0.1,host.docker.internal" neurorag-app
 ```
 
 ---

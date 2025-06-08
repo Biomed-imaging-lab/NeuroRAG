@@ -1,4 +1,5 @@
 import operator
+import os
 from typing import Annotated, Literal
 from typing_extensions import TypedDict
 
@@ -7,7 +8,7 @@ from langchain_chroma import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain.embeddings.cache import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
-from langchain_community.llms import Ollama
+from langchain_ollama.llms import OllamaLLM as Ollama
 from langgraph.graph import START, END, StateGraph
 from langchain_community.retrievers import (
   PubMedRetriever,
@@ -49,6 +50,9 @@ class GraphStateSchema(TypedDict):
   generations_number: int
 
 
+ollama_server_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+
+
 class NeuroRAG:
   def __init__(
     self,
@@ -62,10 +66,10 @@ class NeuroRAG:
     self.debug = debug
     self.generation_prompt = generation_prompt
     self.max_retries = max_retries
-    self.llm = Ollama(model=model, temperature=self.temperature)
+    self.llm = Ollama(model=model, temperature=self.temperature, base_url=ollama_server_url)
 
   def compile(self) -> None:
-    embeddings = OllamaEmbeddings(model='llama3.1')
+    embeddings = OllamaEmbeddings(model='llama3.1', base_url=ollama_server_url)
     embeddings_store = LocalFileStore('./.embeddings_cache')
     self.embeddings = CacheBackedEmbeddings.from_bytes_store(
       embeddings,
@@ -182,7 +186,7 @@ class NeuroRAG:
 
     if self.debug:
       print(f'---SELECTED SOURCES: {specialized_sources}---')
-
+  
     return {'specialized_sources': specialized_sources}
 
   def route_query_node(

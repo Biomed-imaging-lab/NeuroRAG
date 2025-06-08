@@ -9,7 +9,9 @@ from json_extractor import JsonExtractor
 
 
 class FusingSchema(BaseModel):
-  final_response: str = Field(final_response='The final fused response.')
+  correct_answer: str = Field(
+    description='Based on the question and the provided context, choose the most common letter among [A, B, C, D].'
+  )
 
 
 template = """
@@ -28,10 +30,6 @@ Original query:
 {responses}
 
 ### Format instructions
-
-- Create a comprehensive, unified response that intelligently merges insights from all sources.
-- Ensure the final response is clear, concise, and well-structured in JSON format.
-- Highlight the most reliable information while maintaining a cohesive narrative.
 
 {format_instructions}
 """
@@ -58,4 +56,4 @@ class FusingChain:
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, data: dict) -> str:
-    return self.chain.invoke(data).final_response
+    return self.chain.invoke(data).correct_answer
