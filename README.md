@@ -1,21 +1,101 @@
-<p align="center"><h1 align="center">NEURORAG</h1></p>
+<p align="center"><h1 align="center">NeuroRAG</h1></p>
 <p align="center">
 	<em>AI Assistant for neurobiologists</em>
+	<!--TODO: stament for the paper link (doi) -->
 </p>
+
 <p align="center">
-	<img src="https://img.shields.io/github/license/Biomed-imaging-lab/NeuroRAG?style=default&logo=opensourceinitiative&logoColor=white&color=0080ff" alt="license">
+    <img src="https://img.shields.io/github/v/release/Biomed-imaging-lab/NeuroRAG" alt="release">
+	<img src="https://img.shields.io/github/license/Biomed-imaging-lab/NeuroRAG?style=default&logo=opensourceinitiative&logoColor=white&color=orange" alt="license"> 
+	<a href="https://huggingface.co/Biomed-imaging-lab-boss/NeuroRAG">
+	<img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-NeuroRAG-ffc107?color=ffc107&logoColor=white" alt="hugging-face"> 
+	</a>
+	<a href="https://github.com/Biomed-imaging-lab/NeuroRAG">
+    <img src="https://img.shields.io/badge/GitHub-NeuroRAG-181717?logo=github&logoColor=white" alt="GitHub">
+	</a>
+	<br>
+</p>
+
+<div align="center">
+<b>Repository statistics:</b>
+<p align="center">
+	<img src="https://img.shields.io/github/repo-size/Biomed-imaging-lab/NeuroRag" alt="repo size">
 	<img src="https://img.shields.io/github/last-commit/Biomed-imaging-lab/NeuroRAG?style=default&logo=git&logoColor=white&color=0080ff" alt="last-commit">
+	<img src="https://img.shields.io/github/issues/Biomed-imaging-lab/NeuroRag?style=default&logo=git&logoColor=white&color=0080ff" alt="issues">
 	<img src="https://img.shields.io/github/languages/top/Biomed-imaging-lab/NeuroRAG?style=default&color=0080ff" alt="repo-top-language">
 	<img src="https://img.shields.io/github/languages/count/Biomed-imaging-lab/NeuroRAG?style=default&color=0080ff" alt="repo-language-count">
 </p>
-<p align="center"><!-- default option, no dependency badges. -->
-</p>
+</div>
+
+<div align="center">
+<b>System requirements:</b>
 <p align="center">
-	<!-- default option, no dependency badges. -->
+	<img src="https://img.shields.io/badge/python-_3.9-blue?style=default" alt="python">
+	<img src="https://img.shields.io/badge/PyTorch-_2.6.0-orange?style=default" alt="pytorch">
+	<img src="https://img.shields.io/badge/anaconda-%E2%89%A5_24.11.13-green?style=default" alt="anaconda">
 </p>
-<br>
+</div>
+
+<div align="center">
+<b>Share on social media:</b>
+<p align="center">
+<!-- Facebook -->
+<a href="https://www.facebook.com/sharer/sharer.php?u=https://github.com/Biomed-imaging-lab/NeuroRAG">
+	<img src="https://img.shields.io/badge/Facebook-%231877F2.svg?logo=Facebook&logoColor=white">
+</a>
+<!-- Reddit -->
+<a href="https://www.reddit.com/submit?title=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/Biomed-imaging-lab/NeuroRAG">
+	<img src="https://img.shields.io/badge/Reddit-FF4500?logo=reddit&logoColor=white">
+</a>
+<!-- LinkedIn -->
+<a href="https://www.linkedin.com/shareArticle?url=https://github.com/Biomed-imaging-lab/NeuroRAG&title=NeuroRAG&summary=A Biomedical AI Project&source=GitHub">
+	<img src="https://custom-icon-badges.demolab.com/badge/LinkedIn-0A66C2?logo=linkedin-white&logoColor=fff">
+</a>
+<!-- Telegram -->
+<a href="https://t.me/share/url?url=https://github.com/Biomed-imaging-lab/NeuroRAG&text=Check out NeuroRAG: A Biomedical AI Project">
+	<img src="https://img.shields.io/badge/Telegram-2CA5E0?logo=telegram&logoColor=white">
+</a>
+<!-- Threads -->
+<a href="https://www.threads.net/intent/post?text=Check out NeuroRAG on GitHub: https://github.com/Biomed-imaging-lab/NeuroRAG">
+	<img src="https://img.shields.io/badge/Threads-000000?logo=Threads&logoColor=white">
+</a>
+<!-- X (Twitter) -->
+<a href="https://twitter.com/intent/tweet?text=Check out NeuroRAG: A Biomedical AI Project&url=https://github.com/Biomed-imaging-lab/NeuroRAG">
+	<img src="https://img.shields.io/badge/X-%23000000.svg?logo=X&logoColor=white">
+</a>
+<!-- Quora -->
+<a href="https://www.quora.com/share?url=https://github.com/Biomed-imaging-lab/NeuroRAG&title=NeuroRAG: A Biomedical AI Project">
+	<img src="https://img.shields.io/badge/Quora-B92B27?logo=quora&logoColor=fff">
+</a> <br>
+<!-- WhatsApp -->
+<a href="https://wa.me/?text=Check out NeuroRAG: A Biomedical AI Project on GitHub: https://github.com/Biomed-imaging-lab/NeuroRAG">
+	<img src="https://img.shields.io/badge/WhatsApp-25D366?logo=whatsapp&logoColor=white">
+</a>
+<!-- Signal -->
+<a href="https://signal.me/#/?text=Check out NeuroRAG on GitHub: https://github.com/Biomed-imaging-lab/NeuroRAG">
+	<img src="https://img.shields.io/badge/Signal-3A76F0?logo=signal&logoColor=fff">
+</a>
+<!-- WeChat  -->
+<a href="weixin://dl/share?url=https://github.com/Biomed-imaging-lab/NeuroRAG&title=NeuroRAG">
+	<img src="https://img.shields.io/badge/WeChat-07C160?logo=wechat&logoColor=white">
+</a>
+<a href="https://slack.com/intent/tweet?text=Check out NeuroRAG: https://github.com/Biomed-imaging-lab/NeuroRAG">
+	<img src="https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=fff)">
+</a>
+<a href="https://github.com/sponsors/IMZolin">
+	<img src="https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=ff69b4">
+</a>
+</p>
+</div>
+
+---
+
 
 ##  Table of Contents
+
+<details closed>
+
+<summary>More details about contents</summary>
 
 - [Table of Contents](#table-of-contents)
 - [Overview](#overview)
@@ -28,6 +108,9 @@
 	- [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
+- [Authors](#authors)
+
+</details>
 
 ---
 
@@ -35,9 +118,47 @@
 
 NeuroRAG is a cutting-edge open-source project designed to revolutionize language processing in the fields of neurobiology, medicine, and psychology. By seamlessly integrating advanced language models and graph-based operations, NeuroRAG empowers users to effortlessly grade documents, evaluate answers, and rewrite queries for enhanced information retrieval. Ideal for researchers, educators, and AI enthusiasts seeking to unlock the full potential of language processing technologies.
 
+<p align="center">
+<figure>
+  <img src="figures/architecture.png" alt="The NeuroRAG system architecture">
+  <figcaption>The <b>NeuroRAG</b> system <b>architecture</b>. Diagram shows the multi-agent workflow: <b>query input → routing → retrieval → filtering → ensemble answer generation</b> with multiple LLMs, <b>including hallucination and relevance checks</b>.
+  (a) - Query Transformation Chains; (b) - HyDE; (c) - Retrievers; (d) - Routing llm; (e) - Document grader chain; (f) - Ensembling of LLMs; (g) - Validation chain</figcaption>
+</figure>
+</p>
+
+### Results (evaluation on biomedical datasets in QA task)
+
+<div align="center">
+
+| **Datasets** | **GPT4-o** | **Mistral Large** | **Llama3.3 70B** | **BioMistral** | **NeuroRAG** |
+| :------------: | :------------: | :------------: | :------------: | :------------: | :------------: |
+| Medical Genetics | 0.9500 | 0.8600 | 0.9400   | 0.9400   |  **0.9600** |
+| College Biology   | 0.9167 | 0.9514  |  0.9236   | 0.9306   | **0.9722** |
+| College Medicine   | 0.8382 | 0.82664  |  0.7977   | 0.7861   |  **0.8728**|
+
+Accuracy on Biological MMLU Datasets.
+</div>
+
+<div align="center">
+
+| **Metrics** | **GPT4-o** | **Mistral Large** | **Llama3.3 70B** | **BioMistral** | **NeuroRAG** |
+| :------------: | :------------: | :------------: | :------------: | :------------: | :------------: |
+| CosSim | 0.6005 | 0.6008 | 0.6015   | 0.4953   |  **0.6346** |
+| BLEU   | **0.0233** | 0.0183  |  0.0122   | 0.0018   | 0.0166 |
+| ROUGE-1   | **0.2973** | 0.2963  |  0.2570   | 0.2349    |  0.2738 |
+| ROUGE-L   | 0.1601 | 0.1542  |  0.1471   | **0.2082**   |  0.1744 |
+
+Perfromance metrics (Cosine Similarity,  BLEU, ROUGE-1, ROUGE-L) on the MEDIQA Dataset with String Answers.
+
+</div>
+
 ---
 
 ##  Features
+
+<details closed>
+
+<summary>More details about features</summary>
 
 |      | Feature         | Summary       |
 | :--- | :---:           | :---          |
@@ -49,9 +170,15 @@ NeuroRAG is a cutting-edge open-source project designed to revolutionize languag
 | 🧪 | **Testing**       | <ul><li>Testing commands provided in documentation for running tests using `<pytest>` to ensure code functionality and reliability.</li><li>Test files likely exist within the codebase to validate different components and functionalities.</li><li>Test-driven development approach may be employed to maintain code quality and prevent regressions.</li></ul> |
 | ⚡️  | **Performance**   | <ul><li>Utilizes advanced language models like `<GPT>`, `<OpenBio>`, and `<Mistral>` for generating responses and enhancing performance.</li><li>Efficient data retrieval and processing mechanisms in chains like `NCBIRetriever` and `HyDEChain` contribute to overall system performance.</li><li>Performance optimization likely implemented through parallel execution and query optimization strategies.</li></ul> |
 
+</details>
+
 ---
 
 ##  Project Structure
+
+<details closed>
+
+<summary>More details about structure</summary>
 
 ```sh
 └── NeuroRAG/
@@ -98,7 +225,7 @@ NeuroRAG is a cutting-edge open-source project designed to revolutionize languag
     ├── pyproject.toml
     └── requirements.txt
 ```
-
+</details>
 
 ###  Project Index
 <details open>
@@ -331,9 +458,6 @@ Install NeuroRAG using one of the following methods:
 ❯ pip install -r requirements.txt
 ```
 
-
-
-
 ###  Usage
 Run NeuroRAG using the following command:
 
@@ -391,3 +515,10 @@ Run NeuroRAG using the following command:
 This project is protected under the Apache License 2.0 License. For more details, refer to the [LICENSE](https://choosealicense.com/licenses/) file.
 
 ---
+
+## Authors
+
+**Vladimir Skvortsov**<sup>1</sup>, **Ivan Zolin**<sup>1, 2</sup>, **Vyacheslav Chukanov**<sup>1</sup>, **Ekaterina Pchitskaya**<sup>1</sup>
+
+1. Laboratory of Biomedical Imaging and Data Analysis, Institute of Biomedical Systems and Biotechnology, Peter the Great St. Petersburg Polytechnic University  
+2. ITMO University  
