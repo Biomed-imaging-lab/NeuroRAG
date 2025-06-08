@@ -7,7 +7,7 @@
 
 <p align="center">
     <img src="https://img.shields.io/github/v/release/Biomed-imaging-lab/NeuroRAG" alt="release">
-	<img src="https://img.shields.io/github/license/Biomed-imaging-lab/NeuroRAG?style=default&logo=opensourceinitiative&logoColor=white&color=orange" alt="license"> 
+	<img src="https://img.shields.io/github/license/Biomed-imaging-lab/NeuroRAG" alt="license"> 
 	<a href="https://huggingface.co/Biomed-imaging-lab-boss/NeuroRAG">
 	<img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-NeuroRAG-ffc107?color=ffc107&logoColor=white" alt="hugging-face"> 
 	</a>
@@ -16,11 +16,13 @@
 	</a>
 	<br>
 </p>
-	<img src="https://img.shields.io/github/last-commit/Biomed-imaging-lab/NeuroRAG?style=default&logo=git&logoColor=white&color=0080ff" alt="last-commit">
 
 <div align="center">
+
+
 <b>Repository statistics:</b>
 <p align="center">
+	<img src="https://img.shields.io/github/repo-size/Biomed-imaging-lab/NeuroRAG" alt="repo-size">
 	<img src="https://img.shields.io/github/last-commit/Biomed-imaging-lab/NeuroRAG?style=default&logo=git&logoColor=white&color=0080ff" alt="last-commit">
 	<img src="https://img.shields.io/github/issues/Biomed-imaging-lab/NeuroRAG?style=default&logo=git&logoColor=white&color=0080ff" alt="issues">
 	<img src="https://img.shields.io/github/languages/top/Biomed-imaging-lab/NeuroRAG?style=default&color=0080ff" alt="repo-top-language">
