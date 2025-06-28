@@ -50,7 +50,7 @@ class GraphStateSchema(TypedDict):
   generations_number: int
 
 
-ollama_server_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+ollama_server_url = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 
 
 class NeuroRAG:
@@ -66,7 +66,11 @@ class NeuroRAG:
     self.debug = debug
     self.generation_prompt = generation_prompt
     self.max_retries = max_retries
-    self.llm = Ollama(model=model, temperature=self.temperature, base_url=ollama_server_url)
+    self.llm = Ollama(
+      model=model,
+      temperature=self.temperature,
+      base_url=ollama_server_url,
+    )
 
   def compile(self) -> None:
     embeddings = OllamaEmbeddings(model='llama3.1', base_url=ollama_server_url)
@@ -186,7 +190,7 @@ class NeuroRAG:
 
     if self.debug:
       print(f'---SELECTED SOURCES: {specialized_sources}---')
-  
+
     return {'specialized_sources': specialized_sources}
 
   def route_query_node(
