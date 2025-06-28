@@ -1,7 +1,7 @@
 <p align="center"><h1 align="center">NeuroRAG</h1></p>
 <p align="center">
 	<em>AI Assistant for neurobiologists</em>
-	<!--TODO: stament for the paper link (doi) -->
+	<!--TODO: statement for the paper link (doi) -->
 </p>
 
 
@@ -125,7 +125,7 @@ NeuroRAG is a cutting-edge open-source project designed to revolutionize languag
 <figure>
   <img src="figures/architecture.png" alt="The NeuroRAG system architecture">
   <figcaption>The <b>NeuroRAG</b> system <b>architecture</b>. Diagram shows the multi-agent workflow: <b>query input → routing → retrieval → filtering → ensemble answer generation</b> with multiple LLMs, <b>including hallucination and relevance checks</b>.
-  (a) - Query Transformation Chains; (b) - HyDE; (c) - Retrievers; (d) - Routing llm; (e) - Document grader chain; (f) - Ensembling of LLMs; (g) - Validation chain</figcaption>
+  (a) - Query Transformation Chains; (b) - HyDE; (c) - Retrievers; (d) - Routing LLM; (e) - Document grader chain; (f) - Ensembling of LLMs; (g) - Validation chain</figcaption>
 </figure>
 </p>
 
@@ -151,7 +151,7 @@ Accuracy on Biological MMLU Datasets.
 | ROUGE-1   | **0.2973** | 0.2963  |  0.2570   | 0.2349    |  0.2738 |
 | ROUGE-L   | 0.1601 | 0.1542  |  0.1471   | **0.2082**   |  0.1744 |
 
-Perfromance metrics (Cosine Similarity,  BLEU, ROUGE-1, ROUGE-L) on the MEDIQA Dataset with String Answers.
+Performance metrics (Cosine Similarity, BLEU, ROUGE-1, ROUGE-L) on the MEDIQA Dataset with String Answers.
 
 </div>
 
@@ -483,7 +483,7 @@ Run NeuroRAG streamlit app using the following command:
 <details closed>
 <summary>Contributing Guidelines</summary>
 
-1. **Fork the Repository**: Start by forking the project repository to your github account.
+1. **Fork the Repository**: Start by forking the project repository to your GitHub account.
 2. **Clone Locally**: Clone the forked repository to your local machine using a git client.
    ```sh
    git clone https://github.com/Biomed-imaging-lab/NeuroRAG
@@ -497,7 +497,7 @@ Run NeuroRAG streamlit app using the following command:
    ```sh
    git commit -m 'Implemented new feature x.'
    ```
-6. **Push to github**: Push the changes to your forked repository.
+6. **Push to GitHub**: Push the changes to your forked repository.
    ```sh
    git push origin new-feature-x
    ```
