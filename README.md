@@ -7,9 +7,9 @@
 
 <p align="center">
     <img src="https://img.shields.io/github/v/release/Biomed-imaging-lab/NeuroRAG" alt="release">
-	<img src="https://img.shields.io/github/license/Biomed-imaging-lab/NeuroRAG" alt="license"> 
+	<img src="https://img.shields.io/github/license/Biomed-imaging-lab/NeuroRAG" alt="license">
 	<a href="https://huggingface.co/Biomed-imaging-lab-boss/NeuroRAG">
-	<img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-NeuroRAG-ffc107?color=ffc107&logoColor=white" alt="hugging-face"> 
+	<img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-NeuroRAG-ffc107?color=ffc107&logoColor=white" alt="hugging-face">
 	</a>
 	<a href="https://github.com/Biomed-imaging-lab/NeuroRAG">
     <img src="https://img.shields.io/badge/GitHub-NeuroRAG-181717?logo=github&logoColor=white" alt="GitHub">
@@ -527,5 +527,5 @@ This project is protected under the Apache License 2.0 License. For more details
 
 **Vladimir Skvortsov**<sup>1</sup>, **Ivan Zolin**<sup>1, 2</sup>, **Vyacheslav Chukanov**<sup>1</sup>, **Ekaterina Pchitskaya**<sup>1</sup>
 
-1. Laboratory of Biomedical Imaging and Data Analysis, Institute of Biomedical Systems and Biotechnology, Peter the Great St. Petersburg Polytechnic University  
-2. ITMO University  
+1. Laboratory of Biomedical Imaging and Data Analysis, Institute of Biomedical Systems and Biotechnology, Peter the Great St. Petersburg Polytechnic University
+2. ITMO University
