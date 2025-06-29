@@ -27,6 +27,7 @@ from chains.query_rewriting import QueryRewritingChain
 from chains.decomposition import DecompositionChain
 from chains.ncbi_protein import NCBIProteinChain
 from chains.ncbi_gene import NCBIGeneChain
+from chains.biorxiv import BioRxivChain
 from chains.generation import GenerationChain
 
 
@@ -97,6 +98,7 @@ class NeuroRAG:
     self.decomposition_chain = DecompositionChain(self.llm)
     self.ncbi_protein_db_chain = NCBIProteinChain(self.llm)
     self.ncbi_gene_db_chain = NCBIGeneChain(self.llm)
+    self.biorxiv_chain = BioRxivChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=self.max_retries * 3)
     self.generation_chain = GenerationChain(self.llm, self.temperature)
@@ -120,6 +122,7 @@ class NeuroRAG:
     workflow.add_node('arxiv_retriever', self.arxiv_retriever_node)
     workflow.add_node('ncbi_protein_db_retriever', self.ncbi_protein_db_retriever_node)
     workflow.add_node('ncbi_gene_db_retriever', self.ncbi_gene_db_retriever_node)
+    workflow.add_node('biorxiv_retriever', self.biorxiv_retriever_node)
 
     workflow.add_node('websearch', self.web_search_node)
     workflow.add_node('generate', self.generate_node)
@@ -144,12 +147,14 @@ class NeuroRAG:
     workflow.add_edge('generate_hyde_documents', 'arxiv_retriever')
     workflow.add_edge('generate_hyde_documents', 'ncbi_protein_db_retriever')
     workflow.add_edge('generate_hyde_documents', 'ncbi_gene_db_retriever')
+    workflow.add_edge('generate_hyde_documents', 'biorxiv_retriever')
 
     workflow.add_edge('vector_store_retriever', 'grade_documents')
     workflow.add_edge('pub_med_retriever', 'grade_documents')
     workflow.add_edge('arxiv_retriever', 'grade_documents')
     workflow.add_edge('ncbi_protein_db_retriever', 'grade_documents')
     workflow.add_edge('ncbi_gene_db_retriever', 'grade_documents')
+    workflow.add_edge('biorxiv_retriever', 'grade_documents')
 
     workflow.add_conditional_edges(
       'grade_documents',
@@ -391,6 +396,32 @@ class NeuroRAG:
       except Exception as e:
         if self.debug:
           print('ncbi_gene_db_retriever_node', e)
+
+    return {'documents': documents}
+
+  def biorxiv_retriever_node(self, state: GraphStateSchema):
+    specialized_sources = state['specialized_sources']
+
+    if 'biorxiv' not in specialized_sources:
+      return {'documents': []}
+
+    if self.debug:
+      print('---RETRIEVE FROM BIOREVIV---')
+
+    query = state['query']
+    step_back_query = state['step_back_query']
+    rewritten_query = state['rewritten_query']
+    subqueries = state['subqueries']
+
+    queries = [query, step_back_query, rewritten_query, *subqueries]
+    documents = []
+
+    for query in queries:
+      try:
+        documents.extend(self.biorxiv_chain.invoke(query))
+      except Exception as e:
+        if self.debug:
+          print('biorxiv_retriever_node', e)
 
     return {'documents': documents}
 
