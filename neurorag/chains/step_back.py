@@ -5,7 +5,7 @@ from langchain.output_parsers import RetryOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 
-from json_extractor import JsonExtractor
+from chains.json_extractor import JsonExtractor
 
 
 class StepBackSchema(BaseModel):

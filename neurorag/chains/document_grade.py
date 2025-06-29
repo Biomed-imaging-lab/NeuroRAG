@@ -5,10 +5,14 @@ from langchain.output_parsers import RetryOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 
-from json_extractor import JsonExtractor
+from chains.json_extractor import JsonExtractor
+
 
 class DocumentGradeSchema(BaseModel):
-  binary_score: str = Field(description="Documents are relevant to the question, 'yes' or 'no'")
+  binary_score: str = Field(
+    description="Documents are relevant to the question, 'yes' or 'no'"
+  )
+
 
 template = """
 You are a grader assessing relevance of a retrieved document to a user question.
@@ -32,6 +36,7 @@ prompt = PromptTemplate(
   partial_variables={'format_instructions': parser.get_format_instructions()},
 )
 
+
 class DocumentGradeChain:
   def __init__(self, llm):
     retry_parser = RetryOutputParser.from_llm(
@@ -41,7 +46,7 @@ class DocumentGradeChain:
     )
 
     self.chain = RunnableParallel(
-        completion=prompt | llm | JsonExtractor(), prompt_value=prompt
+      completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, query: str, document: str) -> str:

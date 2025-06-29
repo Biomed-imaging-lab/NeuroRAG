@@ -6,11 +6,15 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 from langchain.schema import Document
 
-from json_extractor import JsonExtractor
+from chains.json_extractor import JsonExtractor
 from retrievers.NCBIRetriever import NCBIRetriever
 
+
 class NCBIGeneSchema(BaseModel):
-  query: str = Field(description='Given the original query, please find a gene locus for the NCBI gene database.')
+  query: str = Field(
+    description='Given the original query, please find a gene locus for the NCBI gene database.'
+  )
+
 
 template = """
 As an expert in bioinformatics and user query optimization for biological databases, your task is to transform user questions into precise and effective queries suitable for the NCBI gene database.
@@ -29,6 +33,7 @@ prompt = PromptTemplate(
   partial_variables={'format_instructions': parser.get_format_instructions()},
 )
 
+
 class NCBIGeneChain:
   def __init__(self, llm) -> None:
     retriever = NCBIRetriever(db='gene', k=3)
@@ -39,9 +44,12 @@ class NCBIGeneChain:
       max_retries=3,
     )
 
-    self.chain = RunnableParallel(
-        completion=prompt | llm | JsonExtractor(), prompt_value=prompt
-    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x)) | self.__query_extractor | retriever
+    self.chain = (
+      RunnableParallel(completion=prompt | llm | JsonExtractor(), prompt_value=prompt)
+      | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
+      | self.__query_extractor
+      | retriever
+    )
 
   def __query_extractor(self, response: NCBIGeneSchema) -> str:
     return response.query

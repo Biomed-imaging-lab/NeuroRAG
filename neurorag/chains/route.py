@@ -5,12 +5,14 @@ from langchain.output_parsers import RetryOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 
-from json_extractor import JsonExtractor
+from chains.json_extractor import JsonExtractor
+
 
 class RouteSchema(BaseModel):
   sources: list[str] = Field(
     description='Given a user question select the retrieval methods you consider the most appropriate for addressing this question. You may also return an empty array if no methods are required.',
   )
+
 
 template = """
 You are an expert at selecting retrieval methods.
@@ -38,6 +40,7 @@ prompt = PromptTemplate(
   partial_variables={'format_instructions': parser.get_format_instructions()},
 )
 
+
 class RouteChain:
   def __init__(self, llm):
     retry_parser = RetryOutputParser.from_llm(
@@ -47,7 +50,7 @@ class RouteChain:
     )
 
     self.chain = RunnableParallel(
-        completion=prompt | llm | JsonExtractor(), prompt_value=prompt
+      completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, query: str) -> str:

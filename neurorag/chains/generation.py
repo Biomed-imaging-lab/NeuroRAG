@@ -9,13 +9,13 @@ from langchain_mistralai.chat_models import ChatMistralAI
 from langchain_ollama.llms import OllamaLLM as Ollama
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableSerializable
-from fusing import FusingChain, FusingSchema
 
-from json_extractor import JsonExtractor
+from chains.fusing import FusingChain, FusingSchema
+from chains.json_extractor import JsonExtractor
 from langchain_core.output_parsers import PydanticOutputParser
 
 
-ollama_server_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+ollama_server_url = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 
 
 class FuseData(TypedDict):

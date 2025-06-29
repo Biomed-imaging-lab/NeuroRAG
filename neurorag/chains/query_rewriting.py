@@ -5,10 +5,14 @@ from langchain.output_parsers import RetryOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 
-from json_extractor import JsonExtractor
+from chains.json_extractor import JsonExtractor
+
 
 class QueryRewritingSchema(BaseModel):
-  rewritten_query: str = Field(description='Given the original query, rewrite it to be more specific, detailed, and likely to retrieve relevant information.')
+  rewritten_query: str = Field(
+    description='Given the original query, rewrite it to be more specific, detailed, and likely to retrieve relevant information.'
+  )
+
 
 template = """
 You are an AI assistant tasked with reformulating user queries to improve retrieval in a RAG system.
@@ -29,6 +33,7 @@ prompt = PromptTemplate(
   partial_variables={'format_instructions': parser.get_format_instructions()},
 )
 
+
 class QueryRewritingChain:
   def __init__(self, llm):
     retry_parser = RetryOutputParser.from_llm(
@@ -38,7 +43,7 @@ class QueryRewritingChain:
     )
 
     self.chain = RunnableParallel(
-        completion=prompt | llm | JsonExtractor(), prompt_value=prompt
+      completion=prompt | llm | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, query: str) -> str:
