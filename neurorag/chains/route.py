@@ -20,12 +20,13 @@ Given a user question select the retrieval methods you consider the most appropr
 You may also return an empty array if no methods are required.
 
 Possible retrieval methods:
-1. The "vectorstore" retriever contains documents related to neurobiology and medicine. Use the vectorstore for questions on these topics.
-2. The "pubmed" retriever contains biomedical literature and research articles. It is particularly useful for answering detailed questions about medical research, clinical studies, and scientific discoveries.
-3. The "arxiv" retriever contains preprints of research papers across various scientific fields, including physics, mathematics, computer science, and biology. Use the arxiv for questions on recent scientific research and theoretical studies in these areas.
-4. The "biorxiv" retriever contains preprints specifically in the life sciences, including biology, medicine, and related fields. Use the biorxiv for questions on recent biological and medical research preprints.
-5. The "ncbi_protein" retriever contains protein sequence and functional information. Use the NCBI protein DB for questions related to protein sequences, structures, and functions.
-6. The "ncbi_gene" retriever contains gene sequence and functional information. Use the NCBI gene DB for questions related to gene sequences, structures, and functions.
+- The "vectorstore" retriever contains documents related to neurobiology and medicine. Use the vectorstore for questions on these topics.
+- The "pubmed" retriever contains biomedical literature and research articles. It is particularly useful for answering detailed questions about medical research, clinical studies, and scientific discoveries.
+- The "arxiv" retriever contains preprints of research papers across various scientific fields, including physics, mathematics, computer science, and biology. Use the arxiv for questions on recent scientific research and theoretical studies in these areas.
+- The "biorxiv" retriever contains preprints specifically in the life sciences, including biology, medicine, and related fields. Use the biorxiv for questions on recent biological and medical research preprints.
+- The "medrxiv" retriever contains medical preprints specifically focused on clinical medicine, epidemiology, and health sciences. Use the medrxiv for questions on recent medical research, clinical trials, and health-related preprints.
+- The "ncbi_protein" retriever contains protein sequence and functional information. Use the NCBI protein DB for questions related to protein sequences, structures, and functions.
+- The "ncbi_gene" retriever contains gene sequence and functional information. Use the NCBI gene DB for questions related to gene sequences, structures, and functions.
 
 {format_instructions}
 

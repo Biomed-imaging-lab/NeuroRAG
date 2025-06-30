@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Literal
 
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.output_parsers import RetryOutputParser
@@ -7,7 +8,7 @@ from langchain_core.runnables import RunnableLambda, RunnableParallel
 from langchain.schema import Document
 
 from chains.json_extractor import JsonExtractor
-from retrievers.BioRxivRetriever import BioRxivRetriever
+from retrievers.BioRxivRetriever import BioRxivRetriever, MedRxivRetriever
 
 CATEGORIES = [
   'neuroscience',
@@ -61,7 +62,8 @@ prompt = PromptTemplate(
 
 
 class BioRxivChain:
-  def __init__(self, llm) -> None:
+  def __init__(self, llm, database: Literal['biorxiv', 'medrxiv'] = 'biorxiv') -> None:
+    self.database = database
     retry_parser = RetryOutputParser.from_llm(
       parser=parser,
       llm=llm,
@@ -78,5 +80,17 @@ class BioRxivChain:
       query, category = result.query, result.category
     except Exception:
       category = None
-    retriever = BioRxivRetriever(k=3, category=category)
+
+    if self.database == 'medrxiv':
+      retriever = MedRxivRetriever(k=3, category=category)
+    else:
+      retriever = BioRxivRetriever(k=3, category=category)
+
     return retriever._get_relevant_documents(query, run_manager=None)
+
+
+class MedRxivChain(BioRxivChain):
+  """MedRxiv chain for searching medical preprints."""
+
+  def __init__(self, llm) -> None:
+    super().__init__(llm, database='medrxiv')

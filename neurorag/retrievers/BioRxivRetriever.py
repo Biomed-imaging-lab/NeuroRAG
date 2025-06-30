@@ -1,5 +1,6 @@
 import requests
 from datetime import datetime, timedelta
+from typing import Literal
 
 from langchain_core.retrievers import BaseRetriever
 from langchain.schema import Document
@@ -8,9 +9,9 @@ from langchain_community.retrievers import BM25Retriever
 
 
 class BioRxivRetriever(BaseRetriever):
-  """BioRxiv retriever for searching preprints (local keyword filter)."""
+  """BioRxiv/MedRxiv retriever for searching preprints (local keyword filter)."""
 
-  base_url: str = 'https://api.biorxiv.org/details/biorxiv'
+  database: Literal['biorxiv', 'medrxiv'] = 'biorxiv'
   k: int = 5
   max_results: int = 100  # API returns up to 100 per call
   days_back: int = 30  # How many days back to fetch
@@ -18,19 +19,26 @@ class BioRxivRetriever(BaseRetriever):
 
   def __init__(
     self,
+    database: Literal['biorxiv', 'medrxiv'] = 'biorxiv',
     k: int = 5,
     max_results: int = 100,
     days_back: int = 30,
     category: str | None = None,
   ) -> None:
     super().__init__()
+    self.database = database
     self.k = k
     self.max_results = max_results
     self.days_back = days_back
     self.category = category
 
+  @property
+  def base_url(self) -> str:
+    """Get the base URL for the selected database."""
+    return f'https://api.biorxiv.org/details/{self.database}'
+
   def _fetch_recent_papers(self) -> list[dict]:
-    """Fetch recent papers from BioRxiv using the interval endpoint, supporting pagination."""
+    """Fetch recent papers from BioRxiv/MedRxiv using the interval endpoint, supporting pagination."""
     end_date = datetime.now()
     start_date = end_date - timedelta(days=self.days_back)
     interval = f'{start_date.strftime("%Y-%m-%d")}/{end_date.strftime("%Y-%m-%d")}'
@@ -57,7 +65,7 @@ class BioRxivRetriever(BaseRetriever):
           break
       return all_papers[: self.max_results]
     except Exception as e:
-      print(f'Error fetching BioRxiv papers: {e}')
+      print(f'Error fetching {self.database} papers: {e}')
       return []
 
   def _filter_by_query(self, papers: list[dict], query: str) -> list[dict]:
@@ -86,7 +94,7 @@ class BioRxivRetriever(BaseRetriever):
       'doi': doi,
       'date': date,
       'category': category,
-      'type': 'biorxiv_preprint',
+      'type': f'{self.database}_preprint',
     }
     return Document(page_content=page_content, metadata=metadata)
 
@@ -104,3 +112,22 @@ class BioRxivRetriever(BaseRetriever):
     bm25 = BM25Retriever.from_documents(documents)
     top_docs = bm25.invoke(query)
     return top_docs[: self.k]
+
+
+class MedRxivRetriever(BioRxivRetriever):
+  """MedRxiv retriever for searching medical preprints (local keyword filter)."""
+
+  def __init__(
+    self,
+    k: int = 5,
+    max_results: int = 100,
+    days_back: int = 30,
+    category: str | None = None,
+  ) -> None:
+    super().__init__(
+      database='medrxiv',
+      k=k,
+      max_results=max_results,
+      days_back=days_back,
+      category=category,
+    )
