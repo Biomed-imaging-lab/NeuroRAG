@@ -9,3 +9,5 @@ __pycache__
 .ruff_cache
 chroma_db
 documents
+
+notebooks/cache.json
