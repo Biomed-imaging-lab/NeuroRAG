@@ -44,7 +44,7 @@ parser = PydanticOutputParser(pydantic_object=FusingSchema)
 
 class GenerationChain:
   def __init__(self, llm, temperature: float = 0) -> None:
-    self.fusing_chain = FusingChain()
+    self.fusing_chain = FusingChain(llm)
     self.gpt_llm = ChatOpenAI(model='gpt-4o', temperature=temperature)
     try:
       self.mistral_llm = ChatMistralAI(
