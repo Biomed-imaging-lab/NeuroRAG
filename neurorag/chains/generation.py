@@ -5,7 +5,7 @@ from typing import TypedDict
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda
 from langchain_openai import ChatOpenAI
-from langchain_mistralai.chat_models import ChatMistralAI
+from langchain_mistralai import ChatMistralAI
 from langchain_ollama.llms import OllamaLLM as Ollama
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableSerializable
@@ -44,7 +44,7 @@ parser = PydanticOutputParser(pydantic_object=FusingSchema)
 
 class GenerationChain:
   def __init__(self, llm, temperature: float = 0) -> None:
-    self.fusing_chain = FusingChain(llm)
+    self.fusing_chain = FusingChain()
     self.gpt_llm = ChatOpenAI(model='gpt-4o', temperature=temperature)
     try:
       self.mistral_llm = ChatMistralAI(
