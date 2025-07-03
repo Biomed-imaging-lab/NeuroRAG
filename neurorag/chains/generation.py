@@ -43,38 +43,27 @@ parser = PydanticOutputParser(pydantic_object=FusingSchema)
 
 
 class GenerationChain:
-  def __init__(self, llm, temperature: float = 0) -> None:
+  def __init__(self, llm, temperature: float = 0, llms: dict | None = None) -> None:
     self.fusing_chain = FusingChain(llm)
-    self.gpt_llm = ChatOpenAI(model='gpt-4o', temperature=temperature)
-    try:
-      self.mistral_llm = ChatMistralAI(
-        model='mistral-large-latest',
+    self.temperature = temperature
+    self.llms = llms or {
+      'gpt': ChatOpenAI(model='gpt-4o', temperature=temperature),
+      'mistral': ChatMistralAI(model='mistral-large-latest', temperature=temperature),
+      'biomistral': Ollama(
+        model='cniongolo/biomistral',
         temperature=temperature,
-      )
-    except:
-      # Fallback
-      self.mistral_llm = Ollama(
-        model='mistral-small3.1',
-        temperature=temperature,
-        bese_url=ollama_server_url,
-      )
-    self.biomistral_llm = Ollama(
-      model='cniongolo/biomistral',
-      temperature=temperature,
-      bese_url=ollama_server_url,
-    )
+        base_url=ollama_server_url,
+      ),
+    }
 
-  def __fuse_responses(self, dict: FuseData, *args):
-    query = dict['query']
-
-    gpt_res = dict['gpt_res'].strip()
-    mistral_res = dict['mistral_res'].strip()
-    biomistral_res = dict['biomistral_res'].strip()
-
-    responses = [gpt_res, mistral_res, biomistral_res]
-    responses = list(filter(bool, responses))
+  def __fuse_responses(self, responses_dict, *args):
+    query = responses_dict['query']
+    responses = []
+    for name in responses_dict['llm_responses']:
+      res = responses_dict['llm_responses'][name].strip()
+      if res:
+        responses.append(res)
     combined_responses = '\n\n--------\n\n'.join(responses)
-
     try:
       fused_response = self.fusing_chain.invoke(
         {'query': query, 'responses': combined_responses}
@@ -88,16 +77,11 @@ class GenerationChain:
 
   def invoke(self, query: str, context: str, user_prompt=None) -> str:
     rag_prompt = user_prompt or PromptTemplate.from_template(template)
-
-    gpt_chain = rag_prompt | self.gpt_llm | StrOutputParser()
-    mistral_chain = rag_prompt | self.mistral_llm | StrOutputParser()
-    biomistral_chain = rag_prompt | self.biomistral_llm | StrOutputParser()
-
+    chains = {}
+    for name in self.llms:
+      chains[name] = rag_prompt | self.llms[name] | StrOutputParser()
     chain: RunnableSerializable = {
       'query': itemgetter('query'),
-      'gpt_res': gpt_chain,
-      'mistral_res': mistral_chain,
-      'biomistral_res': biomistral_chain,
+      'llm_responses': {name: chains[name] for name in chains},
     } | RunnableLambda(self.__fuse_responses)
-
     return chain.invoke({'query': query, 'context': context})

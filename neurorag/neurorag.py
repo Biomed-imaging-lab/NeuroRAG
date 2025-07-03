@@ -62,11 +62,13 @@ class NeuroRAG:
     debug: bool = False,
     generation_prompt=None,
     max_retries: int = 2,
+    llms=None,
   ) -> None:
     self.temperature = temperature
     self.debug = debug
     self.generation_prompt = generation_prompt
     self.max_retries = max_retries
+    self.llms = llms
     self.llm = Ollama(
       model=model,
       temperature=self.temperature,
@@ -102,7 +104,7 @@ class NeuroRAG:
     self.medrxiv_chain = MedRxivChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=self.max_retries * 3)
-    self.generation_chain = GenerationChain(self.llm, self.temperature)
+    self.generation_chain = GenerationChain(self.llm, self.temperature, llms=self.llms)
     self.hallucinations_chain = HallucinationsChain(self.llm)
     self.answer_grade_chain = AnswerGradeChain(self.llm)
 
