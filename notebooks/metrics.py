@@ -9,6 +9,16 @@ from langchain_community.embeddings import OllamaEmbeddings
 from rouge_score import rouge_scorer
 from FactScoreLite import FactScore
 
+dict_ids = [
+  'punkt_tab',
+  'punkt',
+  'stopwords',
+  'wordnet',
+]
+
+for dict_id in dict_ids:
+  nltk.download(dict_id, quiet=True)
+
 lemmatizer = nltk.stem.WordNetLemmatizer()
 
 
