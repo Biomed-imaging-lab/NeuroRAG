@@ -97,7 +97,7 @@ st.set_page_config(page_title='NeuroRAG LLM Arena', page_icon='🏟️', layout=
 
 st.title('🏟️ NeuroRAG LLM Arena')
 st.markdown("""
-Compare NeuroRAG's performance against other AI models. Ask a question and see how both models respond, then vote on which answer is better!
+Compare NeuroRAG's performance against other AI models. Ask a question and see how both models respond, then vote on which answer is better.
 """)
 
 with st.sidebar:
@@ -127,7 +127,7 @@ question = st.text_area(
   height=100,
 )
 
-if st.button('🚀 Generate Answers', type='primary', disabled=not question.strip()):
+if st.button('Generate Answers', type='primary', disabled=not question.strip()):
   if question.strip():
     with st.spinner('Generating answers...'):
       neurorag_answer = get_neurorag_answer(question)
