@@ -106,9 +106,18 @@ Compare NeuroRAG's performance against other AI models. Ask a question and see h
 with st.sidebar:
   st.header('⚙️ Settings')
 
-  selected_model = st.selectbox(
-    'Choose competitor model:', list(OPENROUTER_MODELS.keys()), index=0
+  st.subheader('🤖 Competitor Models')
+  st.markdown('Select up to 3 models to compare with NeuroRAG:')
+
+  selected_models = st.multiselect(
+    'Choose competitor models:',
+    options=list(OPENROUTER_MODELS.keys()),
+    default=[list(OPENROUTER_MODELS.keys())[0]],
+    max_selections=3,
   )
+
+  if not selected_models:
+    st.warning('Please select at least one competitor model')
 
   if st.session_state.comparison_history:
     json_data = export_results()
@@ -136,96 +145,99 @@ question = st.text_area(
   height=100,
 )
 
-if st.button('Generate Answers', type='primary', disabled=not question.strip()):
-  if question.strip():
+if st.button(
+  'Generate Answers',
+  type='primary',
+  disabled=not question.strip() or not selected_models,
+):
+  if question.strip() and selected_models:
     with st.spinner('Generating answers...'):
       neurorag_answer = get_neurorag_answer(question)
-      competitor_answer = get_competitor_answer(
-        question, OPENROUTER_MODELS[selected_model]
-      )
+
+      # Generate answers for all selected competitor models
+      competitor_answers = {}
+      for model_name in selected_models:
+        competitor_answers[model_name] = get_competitor_answer(
+          question, OPENROUTER_MODELS[model_name]
+        )
 
       st.session_state.current_question = question
       st.session_state.neurorag_answer = neurorag_answer
-      st.session_state.competitor_answer = competitor_answer
-      st.session_state.competitor_model = selected_model
+      st.session_state.competitor_answers = competitor_answers
+      st.session_state.selected_models = selected_models
 
 if hasattr(st.session_state, 'current_question') and st.session_state.current_question:
-  col1, col2 = st.columns(2)
+  # Create columns: 1 for NeuroRAG + number of competitor models
+  num_competitors = len(st.session_state.selected_models)
+  cols = st.columns(1 + num_competitors)
 
-  with col1:
+  with cols[0]:
     st.subheader('🧠 NeuroRAG')
     st.markdown('**Answer:**')
     st.write(st.session_state.neurorag_answer)
 
-  with col2:
-    st.subheader(f'🤖 {st.session_state.competitor_model}')
-    st.markdown('**Answer:**')
-    st.write(st.session_state.competitor_answer)
+  # Display competitor models in remaining columns
+  for i, model_name in enumerate(st.session_state.selected_models):
+    with cols[i + 1]:
+      st.subheader(f'🤖 {model_name}')
+      st.markdown('**Answer:**')
+      st.write(st.session_state.competitor_answers[model_name])
 
-  vote_cols = st.columns(4)
+  # Create voting section
+  st.markdown('---')
+  st.subheader('🗳️ Vote on the Best Answer')
 
-  with vote_cols[0]:
-    if st.button('👈 Left is Better', type='primary', use_container_width=True):
-      save_comparison(
-        st.session_state.current_question,
-        st.session_state.neurorag_answer,
-        st.session_state.competitor_answer,
-        st.session_state.competitor_model,
-        'Left is Better',
-      )
-      st.success('Vote recorded! Left (NeuroRAG) is better.')
-      # Clear current question
-      del st.session_state.current_question
-      st.rerun()
+  # Create voting options
+  vote_options = (
+    ['NeuroRAG is Best']
+    + [f'{model} is Best' for model in st.session_state.selected_models]
+    + ['Tie', 'All are Bad']
+  )
+  num_vote_cols = len(vote_options)
+  vote_cols = st.columns(num_vote_cols)
 
-  with vote_cols[1]:
-    if st.button('🤝 Tie', type='secondary', use_container_width=True):
-      save_comparison(
-        st.session_state.current_question,
-        st.session_state.neurorag_answer,
-        st.session_state.competitor_answer,
-        st.session_state.competitor_model,
-        'Tie',
-      )
-      st.success("Vote recorded! It's a tie.")
-      del st.session_state.current_question
-      st.rerun()
+  for i, option in enumerate(vote_options):
+    with vote_cols[i]:
+      if st.button(
+        option,
+        type='secondary',
+        use_container_width=True,
+      ):
+        # Determine which model was voted as best
+        if option == 'NeuroRAG is Best':
+          best_model = 'NeuroRAG'
+        elif option == 'Tie':
+          best_model = 'Tie'
+        elif option == 'All are Bad':
+          best_model = 'All are Bad'
+        else:
+          # Extract model name from "Model is Best"
+          best_model = option.replace(' is Best', '')
 
-  with vote_cols[2]:
-    if st.button('😞 Both are Bad', type='secondary', use_container_width=True):
-      save_comparison(
-        st.session_state.current_question,
-        st.session_state.neurorag_answer,
-        st.session_state.competitor_answer,
-        st.session_state.competitor_model,
-        'Both are Bad',
-      )
-      st.success('Vote recorded! Both answers are bad.')
-      del st.session_state.current_question
-      st.rerun()
+        # Save comparison for each competitor model
+        for model_name in st.session_state.selected_models:
+          save_comparison(
+            st.session_state.current_question,
+            st.session_state.neurorag_answer,
+            st.session_state.competitor_answers[model_name],
+            model_name,
+            best_model,
+          )
 
-  with vote_cols[3]:
-    if st.button('👉 Right is Better', type='primary', use_container_width=True):
-      save_comparison(
-        st.session_state.current_question,
-        st.session_state.neurorag_answer,
-        st.session_state.competitor_answer,
-        st.session_state.competitor_model,
-        'Right is Better',
-      )
-      st.success('Vote recorded! Right (competitor) is better.')
-      del st.session_state.current_question
-      st.rerun()
+        st.success(f'Vote recorded! {option}')
+        # Clear current question
+        del st.session_state.current_question
+        st.rerun()
 
 # Instructions
 if not hasattr(st.session_state, 'current_question'):
   st.markdown('---')
   st.markdown("""
     ### How to use:
-    1. **Select a competitor model** from the sidebar
+    1. **Select up to 3 competitor models** from the sidebar
     2. **Type your question** in the text area above
-    3. **Click "Generate Answers"** to get responses from both models
-    4. **Vote** on which answer you think is better
+    3. **Click "Generate Answers"** to get responses from all models
+    4. **Vote** on which answer you think is best
     5. **Export results** to save your comparison history
 
     ### About NeuroRAG:
