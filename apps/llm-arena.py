@@ -52,7 +52,6 @@ def get_neurorag_answer(question: str) -> str:
     neurorag = NeuroRAG(model='llama3.1', temperature=0, debug=False)
     neurorag.compile()
     result = neurorag.invoke(question)
-    return 'test placeholder'
     return result.get('generation', 'No answer generated')
   except Exception as e:
     st.error(f'Error getting NeuroRAG answer: {e}')
@@ -90,13 +89,11 @@ def save_comparison(
   st.session_state.comparison_history.append(comparison)
 
 
-def export_results() -> bool:
-  """Export comparison results to JSON file"""
+def export_results() -> str:
+  """Export comparison results to JSON string"""
   if st.session_state.comparison_history:
-    with open('llm_arena_results.json', 'w') as f:
-      json.dump(st.session_state.comparison_history, f, indent=2)
-    return True
-  return False
+    return json.dumps(st.session_state.comparison_history, indent=2)
+  return ''
 
 
 st.set_page_config(page_title='NeuroRAG LLM Arena', page_icon='🏟️', layout='wide')
@@ -113,11 +110,17 @@ with st.sidebar:
     'Choose competitor model:', list(OPENROUTER_MODELS.keys()), index=0
   )
 
-  if st.button('📊 Export Results', type='secondary'):
-    if export_results():
-      st.success('Results exported to llm_arena_results.json')
-    else:
-      st.warning('No results to export')
+  if st.session_state.comparison_history:
+    json_data = export_results()
+    st.download_button(
+      label='📊 Download Results',
+      data=json_data,
+      file_name='llm_arena_results.json',
+      mime='application/json',
+      type='secondary',
+    )
+  else:
+    st.warning('No results to export')
 
   # Show comparison history
   if st.session_state.comparison_history:
