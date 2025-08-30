@@ -10,6 +10,7 @@ import json
 import pandas as pd
 from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
+from typing import Any, Optional
 
 from neurorag.neurorag import NeuroRAG
 from neurorag.models.OpenRouter import OpenRouter
@@ -35,7 +36,7 @@ OPENROUTER_MODELS = {
 }
 
 
-def get_openrouter_llm(model_name):
+def get_openrouter_llm(model_name: str) -> Optional[Any]:
   """Get OpenRouter LLM instance"""
   try:
     llm = OpenRouter(model=model_name, temperature=0, max_tokens=2000)
@@ -45,19 +46,20 @@ def get_openrouter_llm(model_name):
     return None
 
 
-def get_neurorag_answer(question):
+def get_neurorag_answer(question: str) -> str:
   """Get answer from NeuroRAG"""
   try:
     neurorag = NeuroRAG(model='llama3.1', temperature=0, debug=False)
     neurorag.compile()
     result = neurorag.invoke(question)
+    return 'test placeholder'
     return result.get('generation', 'No answer generated')
   except Exception as e:
     st.error(f'Error getting NeuroRAG answer: {e}')
     return 'Error occurred while generating NeuroRAG answer'
 
 
-def get_competitor_answer(question, model_name):
+def get_competitor_answer(question: str, model_name: str) -> str:
   """Get answer from competitor model"""
   try:
     llm = get_openrouter_llm(model_name)
@@ -70,8 +72,12 @@ def get_competitor_answer(question, model_name):
 
 
 def save_comparison(
-  question, neurorag_answer, competitor_answer, competitor_model, user_choice
-):
+  question: str,
+  neurorag_answer: str,
+  competitor_answer: str,
+  competitor_model: str,
+  user_choice: str,
+) -> None:
   """Save comparison result to session state"""
   comparison = {
     'question': question,
@@ -84,7 +90,7 @@ def save_comparison(
   st.session_state.comparison_history.append(comparison)
 
 
-def export_results():
+def export_results() -> bool:
   """Export comparison results to JSON file"""
   if st.session_state.comparison_history:
     with open('llm_arena_results.json', 'w') as f:
