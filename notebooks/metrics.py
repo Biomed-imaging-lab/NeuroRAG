@@ -9,6 +9,7 @@ from langchain_community.embeddings import OllamaEmbeddings
 from rouge_score import rouge_scorer
 from FactScoreLite import FactScore
 from summac.model_summac import SummaCZS, SummaCConv
+from bert_score import score as bert_score
 
 dict_ids: list[str] = [
   'punkt_tab',
@@ -157,12 +158,8 @@ def summac_zs_metric(expected_answers, predicted_answers) -> float:
   scores = []
 
   for expected_answer, predicted_answer in zip(expected_answers, predicted_answers):
-    try:
-      result = summac_zs.score([expected_answer], [predicted_answer])
-      scores.append(result['scores'][0])
-    except Exception as e:
-      print(f'Error computing SummaC-ZS for pair: {e}')
-      scores.append(0.0)
+    result = summac_zs.score([expected_answer], [predicted_answer])
+    scores.append(result['scores'][0])
 
   return np.mean(scores) if scores else 0.0
 
@@ -182,11 +179,27 @@ def summac_conv_metric(expected_answers, predicted_answers) -> float:
   scores = []
 
   for expected_answer, predicted_answer in zip(expected_answers, predicted_answers):
-    try:
-      result = summac_conv.score([expected_answer], [predicted_answer])
-      scores.append(result['scores'][0])
-    except Exception as e:
-      print(f'Error computing SummaC-Conv for pair: {e}')
-      scores.append(0.0)
+    result = summac_conv.score([expected_answer], [predicted_answer])
+    scores.append(result['scores'][0])
 
   return np.mean(scores) if scores else 0.0
+
+
+def bert_score_metric(
+  expected_answers: list[str],
+  predicted_answers: list[str],
+) -> float:
+  try:
+    P, R, F1 = bert_score(
+      predicted_answers,
+      expected_answers,
+      model_type='microsoft/deberta-xlarge-mnli',
+      lang='en',
+      rescale_with_baseline=True,
+      verbose=False,
+    )
+
+    return float(F1.mean().item())
+  except Exception as e:
+    print(f'Error computing BERT-Score: {e}')
+    return 0.0

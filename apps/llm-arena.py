@@ -23,6 +23,7 @@ from notebooks.metrics import (
   factscore_metric,
   summac_zs_metric,
   summac_conv_metric,
+  bert_score_metric,
 )
 
 from neurorag.neurorag import NeuroRAG
@@ -187,6 +188,7 @@ def evaluate_models_on_dataset(
         'summac_conv': summac_conv_metric(
           expected_answers, results['neurorag_answers']
         ),
+        'bert_score': bert_score_metric(expected_answers, results['neurorag_answers']),
       }
       results['metrics']['NeuroRAG'] = neurorag_metrics
     except Exception as e:
@@ -216,6 +218,9 @@ def evaluate_models_on_dataset(
             expected_answers, results['competitor_answers'][model_name]
           ),
           'summac_conv': summac_conv_metric(
+            expected_answers, results['competitor_answers'][model_name]
+          ),
+          'bert_score': bert_score_metric(
             expected_answers, results['competitor_answers'][model_name]
           ),
         }
@@ -448,6 +453,7 @@ if not hasattr(st.session_state, 'current_question'):
     - **FactScore**: Factual consistency evaluation
     - **SummaC-ZS**: Zero-shot factuality evaluation using visual-text consistency
     - **SummaC-Conv**: Conversational factuality evaluation for multi-turn contexts
+    - **BERT-Score**: Contextual semantic similarity using BERT embeddings (F1 score)
     """)
 
 # Display evaluation results if available
@@ -479,6 +485,7 @@ if (
           'FactScore': f'{metrics["factscore"]:.4f}',
           'SummaC-ZS': f'{metrics["summac_zs"]:.4f}',
           'SummaC-Conv': f'{metrics["summac_conv"]:.4f}',
+          'BERT-Score': f'{metrics["bert_score"]:.4f}',
         }
       )
 
