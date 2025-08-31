@@ -15,7 +15,6 @@ import warnings
 from dotenv import load_dotenv
 
 from neurorag.neurorag import NeuroRAG
-from langchain_ollama.llms import OllamaLLM as Ollama
 
 warnings.filterwarnings('ignore')
 load_dotenv()

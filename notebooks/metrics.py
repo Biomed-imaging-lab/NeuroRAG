@@ -8,8 +8,9 @@ from langchain.embeddings.cache import CacheBackedEmbeddings
 from langchain_community.embeddings import OllamaEmbeddings
 from rouge_score import rouge_scorer
 from FactScoreLite import FactScore
+from summac.model_summac import SummaCZS, SummaCConv
 
-dict_ids = [
+dict_ids: list[str] = [
   'punkt_tab',
   'punkt',
   'stopwords',
@@ -48,7 +49,8 @@ cached_embeddings = CacheBackedEmbeddings.from_bytes_store(
 
 
 def embeddings_cosine_sim_metric(
-  expected_answers: list[str], predicted_answers: list[str]
+  expected_answers: list[str],
+  predicted_answers: list[str],
 ) -> float:
   results = []
 
@@ -72,7 +74,7 @@ def embeddings_cosine_sim_metric(
 smoothie_f = nltk.translate.bleu_score.SmoothingFunction().method4
 
 
-def bleu_metric(expected_answers, predicted_answers):
+def bleu_metric(expected_answers, predicted_answers) -> float:
   scores = []
 
   for expected_answer, predicted_answer in zip(expected_answers, predicted_answers):
@@ -96,7 +98,7 @@ def bleu_metric(expected_answers, predicted_answers):
 rogue_l_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
 
-def rogue_l_metric(expected_answers, predicted_answers):
+def rogue_l_metric(expected_answers, predicted_answers) -> float:
   scores = []
 
   for expected_answer, predicted_answer in zip(expected_answers, predicted_answers):
@@ -113,7 +115,7 @@ def rogue_l_metric(expected_answers, predicted_answers):
 rogue_1_scorer = rouge_scorer.RougeScorer(['rouge1'], use_stemmer=True)
 
 
-def rogue_1_metric(expected_answers, predicted_answers):
+def rogue_1_metric(expected_answers, predicted_answers) -> float:
   scores = []
 
   for expected_answer, predicted_answer in zip(expected_answers, predicted_answers):
@@ -127,7 +129,7 @@ def rogue_1_metric(expected_answers, predicted_answers):
   return np.mean(scores)
 
 
-def factscore_metric(expected_answers, predicted_answers):
+def factscore_metric(expected_answers, predicted_answers) -> float:
   try:
     fact_scorer = FactScore()
     scores = []
@@ -146,3 +148,45 @@ def factscore_metric(expected_answers, predicted_answers):
   except Exception as e:
     print(f'Error initializing FActScore: {e}')
     return 0.0
+
+
+summac_zs = SummaCZS(granularity='sentence', model_name='vitc', device='cpu')
+
+
+def summac_zs_metric(expected_answers, predicted_answers) -> float:
+  scores = []
+
+  for expected_answer, predicted_answer in zip(expected_answers, predicted_answers):
+    try:
+      result = summac_zs.score([expected_answer], [predicted_answer])
+      scores.append(result['scores'][0])
+    except Exception as e:
+      print(f'Error computing SummaC-ZS for pair: {e}')
+      scores.append(0.0)
+
+  return np.mean(scores) if scores else 0.0
+
+
+summac_conv = SummaCConv(
+  models=['vitc'],
+  bins='percentile',
+  granularity='sentence',
+  nli_labels='e',
+  device='cpu',
+  start_file='default',
+  agg='mean',
+)
+
+
+def summac_conv_metric(expected_answers, predicted_answers) -> float:
+  scores = []
+
+  for expected_answer, predicted_answer in zip(expected_answers, predicted_answers):
+    try:
+      result = summac_conv.score([expected_answer], [predicted_answer])
+      scores.append(result['scores'][0])
+    except Exception as e:
+      print(f'Error computing SummaC-Conv for pair: {e}')
+      scores.append(0.0)
+
+  return np.mean(scores) if scores else 0.0

@@ -21,6 +21,8 @@ from notebooks.metrics import (
   rogue_l_metric,
   rogue_1_metric,
   factscore_metric,
+  summac_zs_metric,
+  summac_conv_metric,
 )
 
 from neurorag.neurorag import NeuroRAG
@@ -181,6 +183,10 @@ def evaluate_models_on_dataset(
         'rouge_l': rogue_l_metric(expected_answers, results['neurorag_answers']),
         'rouge_1': rogue_1_metric(expected_answers, results['neurorag_answers']),
         'factscore': factscore_metric(expected_answers, results['neurorag_answers']),
+        'summac_zs': summac_zs_metric(expected_answers, results['neurorag_answers']),
+        'summac_conv': summac_conv_metric(
+          expected_answers, results['neurorag_answers']
+        ),
       }
       results['metrics']['NeuroRAG'] = neurorag_metrics
     except Exception as e:
@@ -204,6 +210,12 @@ def evaluate_models_on_dataset(
             expected_answers, results['competitor_answers'][model_name]
           ),
           'factscore': factscore_metric(
+            expected_answers, results['competitor_answers'][model_name]
+          ),
+          'summac_zs': summac_zs_metric(
+            expected_answers, results['competitor_answers'][model_name]
+          ),
+          'summac_conv': summac_conv_metric(
             expected_answers, results['competitor_answers'][model_name]
           ),
         }
@@ -428,6 +440,14 @@ if not hasattr(st.session_state, 'current_question'):
     ### About NeuroRAG:
     NeuroRAG is a specialized retrieval-augmented generation system designed for neuroscience and biology questions.
     It uses multiple specialized sources and advanced reasoning techniques to provide accurate, well-grounded answers.
+
+    ### Metrics Explained:
+    - **Cosine Similarity**: Semantic similarity between expected and generated answers
+    - **BLEU**: N-gram overlap between expected and generated answers
+    - **ROUGE-L/1**: Longest common subsequence and unigram overlap
+    - **FactScore**: Factual consistency evaluation
+    - **SummaC-ZS**: Zero-shot factuality evaluation using visual-text consistency
+    - **SummaC-Conv**: Conversational factuality evaluation for multi-turn contexts
     """)
 
 # Display evaluation results if available
@@ -457,6 +477,8 @@ if (
           'ROUGE-L': f'{metrics["rouge_l"]:.4f}',
           'ROUGE-1': f'{metrics["rouge_1"]:.4f}',
           'FactScore': f'{metrics["factscore"]:.4f}',
+          'SummaC-ZS': f'{metrics["summac_zs"]:.4f}',
+          'SummaC-Conv': f'{metrics["summac_conv"]:.4f}',
         }
       )
 
