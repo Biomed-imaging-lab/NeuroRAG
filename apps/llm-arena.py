@@ -63,7 +63,6 @@ def get_openrouter_llm(model_name: str) -> Optional[Any]:
 def get_neurorag_answer(question: str) -> str:
   """Get answer from NeuroRAG"""
   try:
-    return 'test placeholder'
     neurorag = NeuroRAG(model='llama3.1', temperature=0, debug=False)
     neurorag.compile()
     result = neurorag.invoke(question)
