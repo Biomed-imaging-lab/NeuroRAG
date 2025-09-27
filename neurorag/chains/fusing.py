@@ -4,8 +4,9 @@ from langchain_core.output_parsers import PydanticOutputParser
 from langchain.output_parsers import RetryOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
+from langchain_openai import ChatOpenAI
 
-from chains.json_extractor import JsonExtractor
+from json_extractor import JsonExtractor
 
 
 class FusingSchema(BaseModel):
@@ -44,7 +45,8 @@ prompt = PromptTemplate(
 
 
 class FusingChain:
-  def __init__(self, llm):
+  def __init__(self):
+    llm = ChatOpenAI(model='gpt-4.1', temperature=0)
     retry_parser = RetryOutputParser.from_llm(
       parser=parser,
       llm=llm,
