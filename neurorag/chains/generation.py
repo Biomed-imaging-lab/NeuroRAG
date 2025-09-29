@@ -71,7 +71,11 @@ class GenerationChain:
       return fused_response
     except Exception:
       try:
-        return (JsonExtractor() | parser).invoke(responses[0]).correct_answer
+        return (
+          (StrOutputParser() | JsonExtractor() | parser)
+          .invoke(responses[0])
+          .correct_answer
+        )
       except Exception:
         return responses[0]
 

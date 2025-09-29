@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Literal
 
-from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
 from langchain.output_parsers import RetryOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
@@ -71,7 +71,7 @@ class BioRxivChain:
     )
 
     self.chain = RunnableParallel(
-      completion=prompt | llm | JsonExtractor(), prompt_value=prompt
+      completion=prompt | llm | StrOutputParser() | JsonExtractor(), prompt_value=prompt
     ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
 
   def invoke(self, query: str) -> list[Document]:
