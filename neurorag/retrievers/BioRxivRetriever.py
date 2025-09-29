@@ -1,6 +1,6 @@
 import requests
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Literal, Optional
 
 from langchain_core.retrievers import BaseRetriever
 from langchain.schema import Document
@@ -15,7 +15,7 @@ class BioRxivRetriever(BaseRetriever):
   k: int = 5
   max_results: int = 100  # API returns up to 100 per call
   days_back: int = 30  # How many days back to fetch
-  category: str | None = None
+  category: Optional[str] = None
 
   def __init__(
     self,
@@ -23,7 +23,7 @@ class BioRxivRetriever(BaseRetriever):
     k: int = 5,
     max_results: int = 100,
     days_back: int = 30,
-    category: str | None = None,
+    category: Optional[str] = None,
   ) -> None:
     super().__init__()
     self.database = database
@@ -122,7 +122,7 @@ class MedRxivRetriever(BioRxivRetriever):
     k: int = 5,
     max_results: int = 100,
     days_back: int = 30,
-    category: str | None = None,
+    category: Optional[str] = None,
   ) -> None:
     super().__init__(
       database='medrxiv',

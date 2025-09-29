@@ -1,6 +1,6 @@
 import os
 from operator import itemgetter
-from typing import TypedDict
+from typing import TypedDict, Optional
 
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda
@@ -43,7 +43,7 @@ parser = PydanticOutputParser(pydantic_object=FusingSchema)
 
 
 class GenerationChain:
-  def __init__(self, llm, temperature: float = 0, llms: dict | None = None) -> None:
+  def __init__(self, llm, temperature: float = 0, llms: Optional[dict] = None) -> None:
     self.fusing_chain = FusingChain()
     self.temperature = temperature
     self.llms = llms or {
