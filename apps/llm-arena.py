@@ -37,11 +37,11 @@ if 'comparison_history' not in st.session_state:
 
 # Available OpenRouter models
 OPENROUTER_MODELS = {
-  'Claude 3.5 Sonnet': 'anthropic/claude-3.5-sonnet',
-  'GPT-4o': 'openai/gpt-4o',
-  'GPT-4o Mini': 'openai/gpt-4o-mini',
+  'Claude 4.5 Sonnet': 'anthropic/claude-sonnet-4.5',
+  'GPT-5': 'openai/gpt-5',
+  'GPT-5 Nano': 'openai/gpt-5-nano',
   'Claude 3.5 Haiku': 'anthropic/claude-3.5-haiku',
-  'Mistral Large': 'mistralai/mistral-large-latest',
+  'Mistral Large': 'mistralai/mistral-large',
   'Llama 3.1 8B': 'meta-llama/llama-3.1-8b-instruct',
   'Llama 3.1 70B': 'meta-llama/llama-3.1-70b-instruct',
   'Gemini Pro': 'google/gemini-pro',
@@ -481,10 +481,10 @@ if (
           'BLEU': f'{metrics["bleu"]:.4f}',
           'ROUGE-L': f'{metrics["rouge_l"]:.4f}',
           'ROUGE-1': f'{metrics["rouge_1"]:.4f}',
-          'FactScore': f'{metrics["factscore"]:.4f}',
-          'SummaC-ZS': f'{metrics["summac_zs"]:.4f}',
-          'SummaC-Conv': f'{metrics["summac_conv"]:.4f}',
-          'BERT-Score': f'{metrics["bert_score"]:.4f}',
+          # 'FactScore': f'{metrics["factscore"]:.4f}',
+          # 'SummaC-ZS': f'{metrics["summac_zs"]:.4f}',
+          # 'SummaC-Conv': f'{metrics["summac_conv"]:.4f}',
+          # 'BERT-Score': f'{metrics["bert_score"]:.4f}',
         }
       )
 
