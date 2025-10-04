@@ -31,7 +31,7 @@ parser = PydanticOutputParser(pydantic_object=HallucinationsSchema)
 
 prompt = PromptTemplate(
   template=template,
-  input_variables=['generation', 'documents'],
+  input_variables=['query', 'documents'],
   partial_variables={'format_instructions': parser.get_format_instructions()},
 )
 
