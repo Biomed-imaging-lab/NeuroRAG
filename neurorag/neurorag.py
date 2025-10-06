@@ -90,7 +90,7 @@ class NeuroRAG:
       persist_directory='../chroma_db',
     )
     self.vector_store_retriever = self.vector_store.as_retriever()
-    self.pub_med_retriever = PubMedRetriever()
+    self.pub_med_retriever = PubMedRetriever(top_k_results=5)
     self.arxiv_retriever = ArxivRetriever(load_max_docs=3, get_ful_documents=True)
 
     self.route_chain = RouteChain(self.llm)
