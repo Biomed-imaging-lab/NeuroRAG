@@ -87,7 +87,7 @@ class NeuroRAG:
     )
     self.vector_store_retriever = self.vector_store.as_retriever()
     self.pub_med_retriever = PubMedRetriever(top_k_results=5)
-    self.arxiv_retriever = ArxivRetriever(load_max_docs=3, get_ful_documents=True)
+    self.arxiv_retriever = ArxivRetriever(load_max_docs=3, get_full_documents=True)
 
     self.route_chain = RouteChain(self.llm)
     self.hyde_chain = HyDEChain(self.llm)
@@ -192,7 +192,9 @@ class NeuroRAG:
     try:
       sources = self.route_chain.invoke(query)
       specialized_sources = [source.strip().lower() for source in sources]
-    except:
+    except Exception as e:
+      if self.debug:
+        print('determine_specialized_src_node', e)
       specialized_sources = []
 
     if self.debug:
@@ -235,7 +237,7 @@ class NeuroRAG:
       rewritten_query = self.query_rewrite_chain.invoke(query)
     except Exception as e:
       if self.debug:
-        print('generate_step_back_query_node', e)
+        print('generate_rewritten_query_node', e)
       rewritten_query = query
 
     return {'rewritten_query': rewritten_query}
@@ -408,7 +410,7 @@ class NeuroRAG:
       return {'documents': []}
 
     if self.debug:
-      print('---RETRIEVE FROM BIOREVIV---')
+      print('---RETRIEVE FROM BIORXIV---')
 
     query = state['query']
     step_back_query = state['step_back_query']
