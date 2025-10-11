@@ -8,7 +8,6 @@ from langchain_chroma import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain.embeddings.cache import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
-from langchain_ollama.llms import OllamaLLM as Ollama
 from langgraph.graph import START, END, StateGraph
 from langchain_community.retrievers import (
   PubMedRetriever,
@@ -43,7 +42,7 @@ class GraphStateSchema(TypedDict):
 
   generated_documents: list[str]
 
-  documents: Annotated[list, operator.add]
+  documents: Annotated[list[Document], operator.add]
 
   web_search: bool
   web_results: list[Document]
