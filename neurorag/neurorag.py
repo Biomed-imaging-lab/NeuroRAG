@@ -29,6 +29,7 @@ from chains.ncbi_protein import NCBIProteinChain
 from chains.ncbi_gene import NCBIGeneChain
 from chains.biorxiv import BioRxivChain, MedRxivChain
 from chains.generation import GenerationChain
+from models.OpenRouter import OpenRouter
 
 
 class GraphStateSchema(TypedDict):
@@ -57,7 +58,7 @@ ollama_server_url = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 class NeuroRAG:
   def __init__(
     self,
-    model='llama3.1',
+    model='meta-llama/llama-3.3-70b-instruct',
     temperature: float = 0,
     debug: bool = False,
     generation_prompt=None,
@@ -69,11 +70,7 @@ class NeuroRAG:
     self.generation_prompt = generation_prompt
     self.max_retries = max_retries
     self.llms = llms
-    self.llm = Ollama(
-      model=model,
-      temperature=self.temperature,
-      base_url=ollama_server_url,
-    )
+    self.llm = OpenRouter(model=model, temperature=self.temperature)
 
   def compile(self) -> None:
     embeddings = OllamaEmbeddings(model='llama3.1', base_url=ollama_server_url)
@@ -468,8 +465,13 @@ class NeuroRAG:
       return {'documents': [], 'web_search': True}
 
     unique_documents = list({doc.page_content: doc for doc in documents}.values())
-    retriever = BM25Retriever.from_documents(unique_documents)
-    retrieved_documents = retriever.invoke(rewritten_query)
+
+    if len(unique_documents) > 10:
+      retriever = BM25Retriever.from_documents(unique_documents)
+      retrieved_documents = retriever.invoke(rewritten_query)
+    else:
+      retrieved_documents = unique_documents
+
     filtered_documents = []
 
     for document in retrieved_documents:
@@ -491,7 +493,7 @@ class NeuroRAG:
     state['documents'].clear()
     return {
       'documents': filtered_documents,
-      'web_search': len(filtered_documents) != len(retrieved_documents),
+      'web_search': len(filtered_documents) < 3,
     }
 
   def decide_to_generate_node(self, state: GraphStateSchema):
