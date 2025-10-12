@@ -10,6 +10,7 @@ from rouge_score import rouge_scorer
 from FactScoreLite import FactScore
 from summac.model_summac import SummaCZS, SummaCConv
 from bert_score import score as bert_score
+from typing import Optional
 
 dict_ids: list[str] = [
   'punkt_tab',
@@ -151,7 +152,7 @@ def factscore_metric(expected_answers, predicted_answers) -> float:
     return 0.0
 
 
-summac_zs: SummaCZS | None = None
+summac_zs: Optional[SummaCZS] = None
 
 
 def summac_zs_metric(expected_answers, predicted_answers) -> float:
@@ -169,7 +170,7 @@ def summac_zs_metric(expected_answers, predicted_answers) -> float:
   return np.mean(scores) if scores else 0.0
 
 
-summac_conv: SummaCConv | None = None
+summac_conv: Optional[SummaCConv] = None
 
 
 def summac_conv_metric(expected_answers, predicted_answers) -> float:
