@@ -7,8 +7,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 from langchain.schema import Document
 
-from chains.json_extractor import JsonExtractor
-from retrievers.BioRxivRetriever import BioRxivRetriever, MedRxivRetriever
+from neurorag.chains.json_extractor import JsonExtractor
+from neurorag.retrievers.BioRxivRetriever import BioRxivRetriever, MedRxivRetriever
 
 CATEGORIES = [
   'neuroscience',

@@ -10,8 +10,8 @@ from langchain_ollama.llms import OllamaLLM as Ollama
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableSerializable
 
-from chains.fusing import FusingChain, FusingSchema
-from chains.json_extractor import JsonExtractor
+from neurorag.chains.fusing import FusingChain, FusingSchema
+from neurorag.chains.json_extractor import JsonExtractor
 from langchain_core.output_parsers import PydanticOutputParser
 
 

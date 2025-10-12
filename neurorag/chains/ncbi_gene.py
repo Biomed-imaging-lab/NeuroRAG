@@ -6,8 +6,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 from langchain.schema import Document
 
-from chains.json_extractor import JsonExtractor
-from retrievers.NCBIRetriever import NCBIRetriever
+from neurorag.chains.json_extractor import JsonExtractor
+from neurorag.retrievers.NCBIRetriever import NCBIRetriever
 
 
 class NCBIGeneSchema(BaseModel):

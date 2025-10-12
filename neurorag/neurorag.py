@@ -16,19 +16,19 @@ from langchain_community.retrievers import (
 )
 from langchain_community.tools.tavily_search import TavilySearchResults
 
-from chains.route import RouteChain
-from chains.document_grade import DocumentGradeChain
-from chains.hallucinations import HallucinationsChain
-from chains.answer_grade import AnswerGradeChain
-from chains.hyde import HyDEChain
-from chains.step_back import StepBackChain
-from chains.query_rewriting import QueryRewritingChain
-from chains.decomposition import DecompositionChain
-from chains.ncbi_protein import NCBIProteinChain
-from chains.ncbi_gene import NCBIGeneChain
-from chains.biorxiv import BioRxivChain, MedRxivChain
-from chains.generation import GenerationChain
-from models.OpenRouter import OpenRouter
+from neurorag.chains.route import RouteChain
+from neurorag.chains.document_grade import DocumentGradeChain
+from neurorag.chains.hallucinations import HallucinationsChain
+from neurorag.chains.answer_grade import AnswerGradeChain
+from neurorag.chains.hyde import HyDEChain
+from neurorag.chains.step_back import StepBackChain
+from neurorag.chains.query_rewriting import QueryRewritingChain
+from neurorag.chains.decomposition import DecompositionChain
+from neurorag.chains.ncbi_protein import NCBIProteinChain
+from neurorag.chains.ncbi_gene import NCBIGeneChain
+from neurorag.chains.biorxiv import BioRxivChain, MedRxivChain
+from neurorag.chains.generation import GenerationChain
+from neurorag.models.OpenRouter import OpenRouter
 
 
 class GraphStateSchema(TypedDict):

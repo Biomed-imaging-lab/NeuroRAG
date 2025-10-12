@@ -6,7 +6,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
 from langchain_openai import ChatOpenAI
 
-from json_extractor import JsonExtractor
+from neurorag.chains.json_extractor import JsonExtractor
 
 
 class FusingSchema(BaseModel):
