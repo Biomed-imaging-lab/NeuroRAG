@@ -22,10 +22,6 @@ from notebooks.metrics import (
   bleu_metric,
   rogue_l_metric,
   rogue_1_metric,
-  factscore_metric,
-  summac_zs_metric,
-  summac_conv_metric,
-  bert_score_metric,
 )
 
 from neurorag.neurorag import NeuroRAG
@@ -184,12 +180,6 @@ def evaluate_models_on_dataset(
         'bleu': bleu_metric(expected_answers, results['neurorag_answers']),
         'rouge_l': rogue_l_metric(expected_answers, results['neurorag_answers']),
         'rouge_1': rogue_1_metric(expected_answers, results['neurorag_answers']),
-        'factscore': factscore_metric(expected_answers, results['neurorag_answers']),
-        'summac_zs': summac_zs_metric(expected_answers, results['neurorag_answers']),
-        'summac_conv': summac_conv_metric(
-          expected_answers, results['neurorag_answers']
-        ),
-        'bert_score': bert_score_metric(expected_answers, results['neurorag_answers']),
       }
       results['metrics']['NeuroRAG'] = neurorag_metrics
     except Exception as e:
@@ -210,18 +200,6 @@ def evaluate_models_on_dataset(
             expected_answers, results['competitor_answers'][model_name]
           ),
           'rouge_1': rogue_1_metric(
-            expected_answers, results['competitor_answers'][model_name]
-          ),
-          'factscore': factscore_metric(
-            expected_answers, results['competitor_answers'][model_name]
-          ),
-          'summac_zs': summac_zs_metric(
-            expected_answers, results['competitor_answers'][model_name]
-          ),
-          'summac_conv': summac_conv_metric(
-            expected_answers, results['competitor_answers'][model_name]
-          ),
-          'bert_score': bert_score_metric(
             expected_answers, results['competitor_answers'][model_name]
           ),
         }
@@ -451,10 +429,6 @@ if not hasattr(st.session_state, 'current_question'):
     - **Cosine Similarity**: Semantic similarity between expected and generated answers
     - **BLEU**: N-gram overlap between expected and generated answers
     - **ROUGE-L/1**: Longest common subsequence and unigram overlap
-    - **FactScore**: Factual consistency evaluation
-    - **SummaC-ZS**: Zero-shot factuality evaluation using visual-text consistency
-    - **SummaC-Conv**: Conversational factuality evaluation for multi-turn contexts
-    - **BERT-Score**: Contextual semantic similarity using BERT embeddings (F1 score)
     """)
 
 # Display evaluation results if available
@@ -483,10 +457,6 @@ if (
           'BLEU': f'{metrics["bleu"]:.4f}',
           'ROUGE-L': f'{metrics["rouge_l"]:.4f}',
           'ROUGE-1': f'{metrics["rouge_1"]:.4f}',
-          # 'FactScore': f'{metrics["factscore"]:.4f}',
-          # 'SummaC-ZS': f'{metrics["summac_zs"]:.4f}',
-          # 'SummaC-Conv': f'{metrics["summac_conv"]:.4f}',
-          # 'BERT-Score': f'{metrics["bert_score"]:.4f}',
         }
       )
 
