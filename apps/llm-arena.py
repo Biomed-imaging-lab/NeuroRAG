@@ -1,15 +1,17 @@
 import sys
+import os
 
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append('..')
 sys.path.append('../notebooks')
 sys.path.append('../neurorag')
 sys.path.append('../neurorag/chains')
+sys.path.append(project_root)
 
 import streamlit as st
 import warnings
 import json
 import pandas as pd
-import os
 from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
 from typing import Any, Optional
