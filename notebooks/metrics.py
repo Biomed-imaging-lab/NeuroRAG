@@ -151,34 +151,44 @@ def factscore_metric(expected_answers, predicted_answers) -> float:
     return 0.0
 
 
-summac_zs = SummaCZS(granularity='sentence', model_name='vitc', device='cpu')
+summac_zs: SummaCZS | None = None
 
 
 def summac_zs_metric(expected_answers, predicted_answers) -> float:
+  global summac_zs
+
   scores = []
 
   for expected_answer, predicted_answer in zip(expected_answers, predicted_answers):
+    if summac_zs is None:
+      summac_zs = SummaCZS(granularity='sentence', model_name='vitc', device='cpu')
+
     result = summac_zs.score([expected_answer], [predicted_answer])
     scores.append(result['scores'][0])
 
   return np.mean(scores) if scores else 0.0
 
 
-summac_conv = SummaCConv(
-  models=['vitc'],
-  bins='percentile',
-  granularity='sentence',
-  nli_labels='e',
-  device='cpu',
-  start_file='default',
-  agg='mean',
-)
+summac_conv: SummaCConv | None = None
 
 
 def summac_conv_metric(expected_answers, predicted_answers) -> float:
+  global summac_conv
+
   scores = []
 
   for expected_answer, predicted_answer in zip(expected_answers, predicted_answers):
+    if summac_conv is None:
+      summac_conv = SummaCConv(
+        models=['vitc'],
+        bins='percentile',
+        granularity='sentence',
+        nli_labels='e',
+        device='cpu',
+        start_file='default',
+        agg='mean',
+      )
+
     result = summac_conv.score([expected_answer], [predicted_answer])
     scores.append(result['scores'][0])
 
