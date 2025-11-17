@@ -128,19 +128,20 @@ class NeuroRAG:
     workflow.add_node('generate', self.generate_node)
     workflow.add_node('grade_documents', self.grade_documents_node)
 
-    workflow.add_edge(START, 'determine_specialized_sources')
+    workflow.add_edge(START, 'generate_rewritten_query')
+
+    workflow.add_edge('generate_rewritten_query', 'generate_step_back_query')
+    workflow.add_edge('generate_step_back_query', 'generate_subqueries')
+    workflow.add_edge('generate_subqueries', 'determine_specialized_sources')
+
     workflow.add_conditional_edges(
       'determine_specialized_sources',
       self.route_query_node,
       {
         'websearch': 'websearch',
-        'specialized_sources': 'generate_step_back_query',
+        'specialized_sources': 'generate_hyde_documents',
       },
     )
-
-    workflow.add_edge('generate_step_back_query', 'generate_rewritten_query')
-    workflow.add_edge('generate_rewritten_query', 'generate_subqueries')
-    workflow.add_edge('generate_subqueries', 'generate_hyde_documents')
 
     workflow.add_edge('generate_hyde_documents', 'vector_store_retriever')
     workflow.add_edge('generate_hyde_documents', 'pub_med_retriever')
@@ -184,13 +185,13 @@ class NeuroRAG:
     return result
 
   def determine_specialized_src_node(self, state):
-    query = state['query']
+    rewritten_query = state['rewritten_query']
 
     if self.debug:
       print('---DETERMINE SPECIALIZED SOURCES---')
 
     try:
-      sources = self.route_chain.invoke(query)
+      sources = self.route_chain.invoke(rewritten_query)
       specialized_sources = [source.strip().lower() for source in sources]
     except Exception as e:
       if self.debug:
@@ -467,11 +468,8 @@ class NeuroRAG:
 
     unique_documents = list({doc.page_content: doc for doc in documents}.values())
 
-    if len(unique_documents) > 10:
-      retriever = BM25Retriever.from_documents(unique_documents)
-      retrieved_documents = retriever.invoke(rewritten_query)
-    else:
-      retrieved_documents = unique_documents
+    retriever = BM25Retriever.from_documents(unique_documents)
+    retrieved_documents = retriever.invoke(rewritten_query)
 
     filtered_documents = []
 
@@ -486,7 +484,7 @@ class NeuroRAG:
       if grade.lower() == 'yes':
         filtered_documents.append(document)
 
-    filtered_documents = filtered_documents[:10]
+    filtered_documents = filtered_documents[:5]
 
     if self.debug:
       print(f'---FINAL DOCUMENTS NUMBER: {len(filtered_documents)}---')
@@ -494,7 +492,7 @@ class NeuroRAG:
     state['documents'].clear()
     return {
       'documents': filtered_documents,
-      'web_search': len(filtered_documents) < 3,
+      'web_search': len(filtered_documents) == 0,
     }
 
   def decide_to_generate_node(self, state: GraphStateSchema):

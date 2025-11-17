@@ -5,7 +5,6 @@ from typing import TypedDict, Optional
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda
 from langchain_openai import ChatOpenAI
-from langchain_mistralai import ChatMistralAI
 from langchain_ollama.llms import OllamaLLM as Ollama
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableSerializable
@@ -13,6 +12,7 @@ from langchain_core.runnables import RunnableSerializable
 from neurorag.chains.fusing import FusingChain, FusingSchema
 from neurorag.chains.json_extractor import JsonExtractor
 from langchain_core.output_parsers import PydanticOutputParser
+from neurorag.models.OpenRouter import OpenRouter
 
 
 ollama_server_url = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
@@ -47,8 +47,8 @@ class GenerationChain:
     self.fusing_chain = FusingChain()
     self.temperature = temperature
     self.llms = llms or {
-      'gpt': ChatOpenAI(model='gpt-4o', temperature=temperature),
-      'mistral': ChatMistralAI(model='mistral-large-latest', temperature=temperature),
+      'gpt': ChatOpenAI(model='gpt-4.1', temperature=temperature),
+      'mistral': OpenRouter(model='mistralai/mistral-large', temperature=temperature),
       'biomistral': Ollama(
         model='cniongolo/biomistral',
         temperature=temperature,
