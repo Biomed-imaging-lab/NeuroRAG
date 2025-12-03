@@ -14,7 +14,7 @@ import json
 import pandas as pd
 from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
-from typing import Any, Optional
+from typing import Any
 import sys
 
 from notebooks.metrics import (
@@ -48,7 +48,7 @@ OPENROUTER_MODELS = {
 }
 
 
-def get_openrouter_llm(model_name: str) -> Optional[Any]:
+def get_openrouter_llm(model_name: str) -> Any | None:
   """Get OpenRouter LLM instance"""
   try:
     llm = OpenRouter(model=model_name, temperature=0, max_tokens=2000)
@@ -119,37 +119,43 @@ def get_available_datasets() -> list[str]:
   return csv_files
 
 
-def load_dataset(dataset_path: str) -> tuple[list[str], list[str]]:
-  """Load dataset and return questions and answers"""
+def load_dataset(dataset_path: str) -> tuple[list[str], list[str], list[str] | None]:
+  """Load dataset and return questions, answers, and optional categories"""
   try:
     df = pd.read_csv(dataset_path)
     if 'question' in df.columns and 'answer' in df.columns:
       questions = df['question'].dropna().tolist()
       answers = df['answer'].dropna().tolist()
-      return questions, answers
+      categories = None
+      if 'category' in df.columns:
+        categories = df['category'].fillna('Unknown').tolist()
+      return questions, answers, categories
     else:
       st.error(
         f"Dataset must have 'question' and 'answer' columns. Found columns: {list(df.columns)}"
       )
-      return [], []
+      return [], [], None
   except Exception as e:
     st.error(f'Error loading dataset: {e}')
-    return [], []
+    return [], [], None
 
 
 def evaluate_models_on_dataset(
   questions: list[str],
   expected_answers: list[str],
   selected_models: list[str],
+  categories: list[str] | None = None,
 ) -> dict:
   """Evaluate all models on the dataset and return metrics"""
   results: dict[str, Any] = {
     'dataset_name': 'uploaded_dataset',
     'questions': questions,
     'expected_answers': expected_answers,
+    'categories': categories,
     'neurorag_answers': [],
     'competitor_answers': {},
     'metrics': {},
+    'metrics_by_category': {},
   }
 
   # Initialize competitor answers dict
@@ -208,6 +214,59 @@ def evaluate_models_on_dataset(
         st.error(f'Error calculating {model_name} metrics: {e}')
         results['metrics'][model_name] = {'error': str(e)}
 
+  # Calculate metrics by category if categories are available
+  if categories:
+    with st.spinner('Calculating metrics by category...'):
+      unique_categories = list(set(categories))
+
+      for category in unique_categories:
+        # Get indices for this category
+        category_indices = [i for i, cat in enumerate(categories) if cat == category]
+
+        if not category_indices:
+          continue
+
+        # Extract data for this category
+        cat_expected = [expected_answers[i] for i in category_indices]
+        cat_neurorag = [results['neurorag_answers'][i] for i in category_indices]
+
+        category_metrics = {}
+
+        # NeuroRAG metrics for this category
+        try:
+          category_metrics['NeuroRAG'] = {
+            'cosine_similarity': embeddings_cosine_sim_metric(
+              cat_expected, cat_neurorag
+            ),
+            'bleu': bleu_metric(cat_expected, cat_neurorag),
+            'rouge_l': rogue_l_metric(cat_expected, cat_neurorag),
+            'rouge_1': rogue_1_metric(cat_expected, cat_neurorag),
+          }
+        except Exception as e:
+          category_metrics['NeuroRAG'] = {'error': str(e)}
+
+        # Competitor models metrics for this category
+        for model_name in selected_models:
+          try:
+            cat_competitor = [
+              results['competitor_answers'][model_name][i] for i in category_indices
+            ]
+            category_metrics[model_name] = {
+              'cosine_similarity': embeddings_cosine_sim_metric(
+                cat_expected, cat_competitor
+              ),
+              'bleu': bleu_metric(cat_expected, cat_competitor),
+              'rouge_l': rogue_l_metric(cat_expected, cat_competitor),
+              'rouge_1': rogue_1_metric(cat_expected, cat_competitor),
+            }
+          except Exception as e:
+            category_metrics[model_name] = {'error': str(e)}
+
+        results['metrics_by_category'][category] = {
+          'count': len(category_indices),
+          'metrics': category_metrics,
+        }
+
   return results
 
 
@@ -248,17 +307,22 @@ with st.sidebar:
 
     if selected_dataset:
       dataset_path = f'../datasets/{selected_dataset}'
-      questions, answers = load_dataset(dataset_path)
+      questions, answers, categories = load_dataset(dataset_path)
 
       if questions and answers:
-        st.success(f'Loaded {len(questions)} questions from {selected_dataset}')
+        category_info = (
+          f' (with {len(set(categories))} categories)' if categories else ''
+        )
+        st.success(
+          f'Loaded {len(questions)} questions from {selected_dataset}{category_info}'
+        )
 
         if st.button('🚀 Run Evaluation', type='primary'):
           if len(questions) > 10:
             st.warning('Dataset is large. This may take a while...')
 
           evaluation_results = evaluate_models_on_dataset(
-            questions, answers, selected_models
+            questions, answers, selected_models, categories
           )
           st.session_state.evaluation_results = evaluation_results
           st.success('Evaluation completed!')
@@ -269,7 +333,7 @@ with st.sidebar:
   uploaded_file = st.file_uploader(
     'Upload CSV file with question and answer columns',
     type=['csv'],
-    help='CSV must have columns named "question" and "answer"',
+    help='CSV must have columns named "question" and "answer". Optional "category" column for category-based metrics.',
   )
 
   if uploaded_file is not None:
@@ -278,15 +342,21 @@ with st.sidebar:
       if 'question' in df.columns and 'answer' in df.columns:
         questions = df['question'].dropna().tolist()
         answers = df['answer'].dropna().tolist()
+        categories = None
+        if 'category' in df.columns:
+          categories = df['category'].fillna('Unknown').tolist()
 
-        st.success(f'Uploaded dataset with {len(questions)} questions')
+        category_info = (
+          f' (with {len(set(categories))} categories)' if categories else ''
+        )
+        st.success(f'Uploaded dataset with {len(questions)} questions{category_info}')
 
         if st.button('🚀 Evaluate Uploaded Dataset', type='primary'):
           if len(questions) > 10:
             st.warning('Dataset is large. This may take a while...')
 
           evaluation_results = evaluate_models_on_dataset(
-            questions, answers, selected_models
+            questions, answers, selected_models, categories
           )
           evaluation_results['dataset_name'] = uploaded_file.name
           st.session_state.evaluation_results = evaluation_results
@@ -463,6 +533,31 @@ if (
   if metrics_data:
     metrics_df = pd.DataFrame(metrics_data)
     st.dataframe(metrics_df, use_container_width=True)
+
+    # Display metrics by category if available
+    if results.get('metrics_by_category'):
+      st.subheader('📊 Metrics by Category')
+
+      category_metrics_data = []
+      for category, cat_data in results['metrics_by_category'].items():
+        count = cat_data['count']
+        for model_name, metrics in cat_data['metrics'].items():
+          if 'error' not in metrics:
+            category_metrics_data.append(
+              {
+                'Category': category,
+                'Count': count,
+                'Model': model_name,
+                'Cosine Similarity': f'{metrics["cosine_similarity"]:.4f}',
+                'BLEU': f'{metrics["bleu"]:.4f}',
+                'ROUGE-L': f'{metrics["rouge_l"]:.4f}',
+                'ROUGE-1': f'{metrics["rouge_1"]:.4f}',
+              }
+            )
+
+      if category_metrics_data:
+        category_metrics_df = pd.DataFrame(category_metrics_data)
+        st.dataframe(category_metrics_df, use_container_width=True)
 
     json_data = json.dumps(results, indent=2, ensure_ascii=False)
     st.download_button(
