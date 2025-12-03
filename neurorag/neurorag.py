@@ -249,6 +249,8 @@ class NeuroRAG:
     if self.debug:
       print('---GENERATE SUBQUERIES---')
 
+    subqueries: list[str] = []
+
     try:
       subqueries = self.decomposition_chain.invoke(query)
       # Limit to a maximum of four subqueries
@@ -256,7 +258,6 @@ class NeuroRAG:
     except Exception as e:
       if self.debug:
         print('generate_subqueries_node', e)
-      subqueries = []
 
     return {'subqueries': subqueries}
 
@@ -467,6 +468,9 @@ class NeuroRAG:
       return {'documents': [], 'web_search': True}
 
     unique_documents = list({doc.page_content: doc for doc in documents}.values())
+
+    if self.debug:
+      print(f'---AFTER EXACT DEDUPLICATION: {len(unique_documents)} documents---')
 
     retriever = BM25Retriever.from_documents(unique_documents)
     retrieved_documents = retriever.invoke(rewritten_query)
