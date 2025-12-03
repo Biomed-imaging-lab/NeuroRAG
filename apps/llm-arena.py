@@ -140,6 +140,13 @@ def load_dataset(dataset_path: str) -> tuple[list[str], list[str], list[str] | N
     return [], [], None
 
 
+def build_masked_names(model_list):
+  return {name: f'Model {i + 1}' for i, name in enumerate(model_list)}
+
+
+MASKED_NAMES = build_masked_names(list(OPENROUTER_MODELS.keys()) + ['NeuroRAG'])
+
+
 def evaluate_models_on_dataset(
   questions: list[str],
   expected_answers: list[str],
@@ -187,7 +194,7 @@ def evaluate_models_on_dataset(
         'rouge_l': rogue_l_metric(expected_answers, results['neurorag_answers']),
         'rouge_1': rogue_1_metric(expected_answers, results['neurorag_answers']),
       }
-      results['metrics']['NeuroRAG'] = neurorag_metrics
+      results['metrics'][MASKED_NAMES['NeuroRAG']] = neurorag_metrics
     except Exception as e:
       st.error(f'Error calculating NeuroRAG metrics: {e}')
       results['metrics']['NeuroRAG'] = {'error': str(e)}
@@ -283,15 +290,21 @@ with st.sidebar:
   st.subheader('🤖 Competitor Models')
   st.markdown('Select up to 3 models to compare with NeuroRAG:')
 
+  real_model_names = list(OPENROUTER_MODELS.keys())
+
   selected_models = st.multiselect(
     'Choose competitor models:',
-    options=list(OPENROUTER_MODELS.keys()),
-    default=[list(OPENROUTER_MODELS.keys())[0]],
+    options=real_model_names,
+    default=[real_model_names[0]],
     max_selections=3,
   )
 
   if not selected_models:
     st.warning('Please select at least one competitor model')
+
+  selected_models_masked = [MASKED_NAMES[m] for m in selected_models]
+
+  st.session_state.selected_models_masked = selected_models_masked
 
   # Dataset evaluation section
   st.markdown('---')
@@ -390,7 +403,7 @@ with st.sidebar:
     st.header('📝 History')
     for i, comp in enumerate(st.session_state.comparison_history[-5:]):  # Show last 5
       with st.expander(f'Q{i + 1}: {comp["question"][:50]}...'):
-        st.write(f'**Model:** {comp["competitor_model"]}')
+        st.write(f'**Model:** {MASKED_NAMES.get(comp["competitor_model"], "Model")}')
         st.write(f'**Choice:** {comp["user_choice"]}')
 
 question = st.text_area(
@@ -426,14 +439,15 @@ if hasattr(st.session_state, 'current_question') and st.session_state.current_qu
   cols = st.columns(1 + num_competitors)
 
   with cols[0]:
-    st.subheader('🧠 NeuroRAG')
+    st.subheader(f'🧠 {MASKED_NAMES["NeuroRAG"]}')
     st.markdown('**Answer:**')
     st.write(st.session_state.neurorag_answer)
 
   # Display competitor models in remaining columns
   for i, model_name in enumerate(st.session_state.selected_models):
+    masked = MASKED_NAMES[model_name]
     with cols[i + 1]:
-      st.subheader(f'🤖 {model_name}')
+      st.subheader(f'🤖 {masked}')
       st.markdown('**Answer:**')
       st.write(st.session_state.competitor_answers[model_name])
 
@@ -441,8 +455,8 @@ if hasattr(st.session_state, 'current_question') and st.session_state.current_qu
   st.subheader('🗳️ Vote on the Best Answer')
 
   vote_options = (
-    ['NeuroRAG is Best']
-    + [f'{model} is Best' for model in st.session_state.selected_models]
+    [f'{MASKED_NAMES["NeuroRAG"]} is Best']
+    + [f'{MASKED_NAMES[model]} is Best' for model in st.session_state.selected_models]
     + ['Tie', 'All are Bad']
   )
   num_vote_cols = len(vote_options)
@@ -456,8 +470,8 @@ if hasattr(st.session_state, 'current_question') and st.session_state.current_qu
         use_container_width=True,
       ):
         # Determine which model was voted as best
-        if option == 'NeuroRAG is Best':
-          best_model = 'NeuroRAG'
+        if option == f'{MASKED_NAMES["NeuroRAG"]} is Best':
+          best_model = MASKED_NAMES['NeuroRAG']
         elif option == 'Tie':
           best_model = 'Tie'
         elif option == 'All are Bad':
@@ -522,7 +536,7 @@ if (
     if 'error' not in metrics:
       metrics_data.append(
         {
-          'Model': model_name,
+          'Model': MASKED_NAMES.get(model_name, model_name),
           'Cosine Similarity': f'{metrics["cosine_similarity"]:.4f}',
           'BLEU': f'{metrics["bleu"]:.4f}',
           'ROUGE-L': f'{metrics["rouge_l"]:.4f}',
