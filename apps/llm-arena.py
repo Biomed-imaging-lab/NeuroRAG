@@ -14,7 +14,7 @@ import json
 import pandas as pd
 from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
-from typing import Any
+from typing import Any, Optional
 import sys
 
 from notebooks.metrics import (
@@ -48,7 +48,7 @@ OPENROUTER_MODELS = {
 }
 
 
-def get_openrouter_llm(model_name: str) -> Any | None:
+def get_openrouter_llm(model_name: str) -> Optional[Any]:
   """Get OpenRouter LLM instance"""
   try:
     llm = OpenRouter(model=model_name, temperature=0, max_tokens=2000)
@@ -119,7 +119,7 @@ def get_available_datasets() -> list[str]:
   return csv_files
 
 
-def load_dataset(dataset_path: str) -> tuple[list[str], list[str], list[str] | None]:
+def load_dataset(dataset_path: str) -> tuple[list[str], list[str], Optional[list[str]]]:
   """Load dataset and return questions, answers, and optional categories"""
   try:
     df = pd.read_csv(dataset_path)
@@ -151,7 +151,7 @@ def evaluate_models_on_dataset(
   questions: list[str],
   expected_answers: list[str],
   selected_models: list[str],
-  categories: list[str] | None = None,
+  categories: Optional[list[str]] = None,
 ) -> dict:
   """Evaluate all models on the dataset and return metrics"""
   results: dict[str, Any] = {
