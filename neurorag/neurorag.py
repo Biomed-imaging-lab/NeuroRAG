@@ -1,11 +1,9 @@
 import operator
-import os
 from typing import Annotated, Literal
 from typing_extensions import TypedDict
 
 from langchain.schema import Document
 from langchain_chroma import Chroma
-from langchain_community.embeddings import OllamaEmbeddings
 from langchain.embeddings.cache import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
 from langgraph.graph import START, END, StateGraph
@@ -29,6 +27,7 @@ from neurorag.chains.ncbi_gene import NCBIGeneChain
 from neurorag.chains.biorxiv import BioRxivChain, MedRxivChain
 from neurorag.chains.generation import GenerationChain
 from neurorag.models.OpenRouter import OpenRouter
+from neurorag.models.OpenRouterEmbeddings import OpenRouterEmbeddings
 
 
 class GraphStateSchema(TypedDict):
@@ -51,13 +50,11 @@ class GraphStateSchema(TypedDict):
   generations_number: int
 
 
-ollama_server_url = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
-
-
 class NeuroRAG:
   def __init__(
     self,
     model='meta-llama/llama-3.3-70b-instruct',
+    embeddings_model='openai/text-embedding-3-small',
     temperature: float = 0,
     debug: bool = False,
     generation_prompt=None,
@@ -70,9 +67,10 @@ class NeuroRAG:
     self.max_retries = max_retries
     self.llms = llms
     self.llm = OpenRouter(model=model, temperature=self.temperature)
+    self.embeddings_model = embeddings_model
 
   def compile(self) -> None:
-    embeddings = OllamaEmbeddings(model='llama3.1', base_url=ollama_server_url)
+    embeddings = OpenRouterEmbeddings(model=self.embeddings_model)
     embeddings_store = LocalFileStore('./.embeddings_cache')
     self.embeddings = CacheBackedEmbeddings.from_bytes_store(
       embeddings,
