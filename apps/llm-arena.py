@@ -60,26 +60,18 @@ def get_openrouter_llm(model_name: str) -> Optional[Any]:
 
 def get_neurorag_answer(question: str) -> str:
   """Get answer from NeuroRAG"""
-  try:
-    neurorag = NeuroRAG(model='llama3.1', temperature=0, debug=False)
-    neurorag.compile()
-    result = neurorag.invoke(question)
-    return result.get('generation', 'No answer generated')
-  except Exception as e:
-    st.error(f'Error getting NeuroRAG answer: {e}')
-    return 'Error occurred while generating NeuroRAG answer'
+  neurorag = NeuroRAG(temperature=0, debug=True)
+  neurorag.compile()
+  result = neurorag.invoke(question)
+  return result.get('generation', 'No answer generated')
 
 
 def get_competitor_answer(question: str, model_name: str) -> str:
   """Get answer from competitor model"""
-  try:
-    llm = get_openrouter_llm(model_name)
-    if llm:
-      return llm.invoke(question)
-    return 'Error: Could not initialize model'
-  except Exception as e:
-    st.error(f'Error getting competitor answer: {e}')
-    return 'Error occurred while generating competitor answer'
+  llm = get_openrouter_llm(model_name)
+  if llm:
+    return llm.invoke(question)
+  return 'Error: Could not initialize model'
 
 
 def save_comparison(
