@@ -14,7 +14,7 @@ import umap  # type: ignore
 from sklearn.mixture import GaussianMixture
 import chromadb
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_community.document_loaders import PDFMinerLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings

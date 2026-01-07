@@ -4,7 +4,6 @@
 	<!--TODO: statement for the paper link (doi) -->
 </p>
 
-
 <p align="center">
     <img src="https://img.shields.io/github/v/release/Biomed-imaging-lab/NeuroRAG" alt="release">
 	<img src="https://img.shields.io/github/license/Biomed-imaging-lab/NeuroRAG" alt="license">
@@ -19,8 +18,8 @@
 
 <div align="center">
 
-
 <b>Repository statistics:</b>
+
 <p align="center">
 	<img src="https://img.shields.io/github/repo-size/Biomed-imaging-lab/NeuroRAG" alt="repo-size">
 	<img src="https://img.shields.io/github/last-commit/Biomed-imaging-lab/NeuroRAG?style=default&logo=git&logoColor=white&color=0080ff" alt="last-commit">
@@ -93,8 +92,7 @@
 
 ---
 
-
-##  Table of Contents
+## Table of Contents
 
 <details closed>
 
@@ -104,11 +102,11 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Project Structure](#project-structure)
-	- [Project Index](#project-index)
+  - [Project Index](#project-index)
 - [Getting Started](#getting-started)
-	- [Prerequisites](#prerequisites)
-	- [Installation](#installation)
-	- [Usage](#usage)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
 - [Authors](#authors)
@@ -117,7 +115,7 @@
 
 ---
 
-##  Overview
+## Overview
 
 NeuroRAG is a cutting-edge open-source project designed to revolutionize language processing in the fields of neurobiology, medicine, and psychology. By seamlessly integrating advanced language models and graph-based operations, NeuroRAG empowers users to effortlessly grade documents, evaluate answers, and rewrite queries for enhanced information retrieval. Ideal for researchers, educators, and AI enthusiasts seeking to unlock the full potential of language processing technologies.
 
@@ -133,23 +131,24 @@ NeuroRAG is a cutting-edge open-source project designed to revolutionize languag
 
 <div align="center">
 
-| **Datasets** | **GPT4-o** | **Mistral Large** | **Llama3.3 70B** | **BioMistral** | **NeuroRAG** |
-| :------------: | :------------: | :------------: | :------------: | :------------: | :------------: |
-| Medical Genetics | 0.9500 | 0.8600 | 0.9400   | 0.9400   |  **0.9600** |
-| College Biology   | 0.9167 | 0.9514  |  0.9236   | 0.9306   | **0.9722** |
-| College Medicine   | 0.8382 | 0.82664  |  0.7977   | 0.7861   |  **0.8728**|
+|   **Datasets**   | **GPT4-o** | **Mistral Large** | **Llama3.3 70B** | **BioMistral** | **NeuroRAG** |
+| :--------------: | :--------: | :---------------: | :--------------: | :------------: | :----------: |
+| Medical Genetics |   0.9500   |      0.8600       |      0.9400      |     0.9400     |  **0.9600**  |
+| College Biology  |   0.9167   |      0.9514       |      0.9236      |     0.9306     |  **0.9722**  |
+| College Medicine |   0.8382   |      0.82664      |      0.7977      |     0.7861     |  **0.8728**  |
 
 Accuracy on Biological MMLU Datasets.
+
 </div>
 
 <div align="center">
 
 | **Metrics** | **GPT4-o** | **Mistral Large** | **Llama3.3 70B** | **BioMistral** | **NeuroRAG** |
-| :------------: | :------------: | :------------: | :------------: | :------------: | :------------: |
-| CosSim | 0.6005 | 0.6008 | 0.6015   | 0.4953   |  **0.6346** |
-| BLEU   | **0.0233** | 0.0183  |  0.0122   | 0.0018   | 0.0166 |
-| ROUGE-1   | **0.2973** | 0.2963  |  0.2570   | 0.2349    |  0.2738 |
-| ROUGE-L   | 0.1601 | 0.1542  |  0.1471   | **0.2082**   |  0.1744 |
+| :---------: | :--------: | :---------------: | :--------------: | :------------: | :----------: |
+|   CosSim    |   0.6005   |      0.6008       |      0.6015      |     0.4953     |  **0.6346**  |
+|    BLEU     | **0.0233** |      0.0183       |      0.0122      |     0.0018     |    0.0166    |
+|   ROUGE-1   | **0.2973** |      0.2963       |      0.2570      |     0.2349     |    0.2738    |
+|   ROUGE-L   |   0.1601   |      0.1542       |      0.1471      |   **0.2082**   |    0.1744    |
 
 Performance metrics (Cosine Similarity, BLEU, ROUGE-1, ROUGE-L) on the MEDIQA Dataset with String Answers.
 
@@ -157,27 +156,27 @@ Performance metrics (Cosine Similarity, BLEU, ROUGE-1, ROUGE-L) on the MEDIQA Da
 
 ---
 
-##  Features
+## Features
 
 <details closed>
 
 <summary>More details about features</summary>
 
-|      | Feature         | Summary       |
-| :--- | :---:           | :---          |
-| ⚙️  | **Architecture**  | <ul><li>NeuroRAG utilizes a modular architecture with components such as document processing, retrievers, chains, and answer grading.</li><li>The architecture enables advanced language processing and graph-based operations for tasks like document grading and query rewriting.</li><li>Central hub in `neurorag.py` orchestrates data flow through different modules for seamless integration and operation.</li></ul> |
-| 🔩 | **Code Quality**  | <ul><li>Codebase maintains high code quality standards with consistent formatting and linting rules defined in `pyproject.toml`.</li><li>Utilizes essential libraries like `<scikit-learn>`, `<numpy>`, and `<pandas>` for efficient data manipulation and processing.</li><li>Includes detailed documentation within code files to enhance readability and maintainability.</li></ul> |
-| 📄 | **Documentation** | <ul><li>Extensive documentation in various formats (e.g., `<ipynb>`, `<py>`) covering dataset generation, model evaluation, and application interfaces.</li><li>Usage of `<pip>` for managing dependencies and providing clear installation instructions in `requirements.txt`.</li><li>Documentation includes detailed explanations of code files and their roles within the project architecture.</li></ul> |
-| 🔌 | **Integrations**  | <ul><li>Integrates with external libraries and frameworks like `<langchain>`, `<langgraph>`, and `<langchainhub>` for enhanced language processing capabilities.</li><li>FastAPI endpoint in `api.py` enables seamless integration of NeuroRAG model for answering queries based on pre-loaded documents.</li><li>Utilizes Streamlit chatbot interface in `app.py` for user interaction and content display.</li></ul> |
-| 🧩 | **Modularity**    | <ul><li>Project design emphasizes modularity with distinct components like retrievers, chains, and document grading for specific tasks.</li><li>Each chain (e.g., `FusingChain`, `GenerationChain`) encapsulates logic for specific operations, promoting reusability and maintainability.</li><li>Modular approach allows for easy scalability and extension of functionality through additional chains or components.</li></ul> |
-| 🧪 | **Testing**       | <ul><li>Testing commands provided in documentation for running tests using `<pytest>` to ensure code functionality and reliability.</li><li>Test files likely exist within the codebase to validate different components and functionalities.</li><li>Test-driven development approach may be employed to maintain code quality and prevent regressions.</li></ul> |
-| ⚡️  | **Performance**   | <ul><li>Utilizes advanced language models like `<GPT>`, `<OpenBio>`, and `<Mistral>` for generating responses and enhancing performance.</li><li>Efficient data retrieval and processing mechanisms in chains like `NCBIRetriever` and `HyDEChain` contribute to overall system performance.</li><li>Performance optimization likely implemented through parallel execution and query optimization strategies.</li></ul> |
+|     |      Feature      | Summary                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| :-- | :---------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ⚙️  | **Architecture**  | <ul><li>NeuroRAG utilizes a modular architecture with components such as document processing, retrievers, chains, and answer grading.</li><li>The architecture enables advanced language processing and graph-based operations for tasks like document grading and query rewriting.</li><li>Central hub in `neurorag.py` orchestrates data flow through different modules for seamless integration and operation.</li></ul>       |
+| 🔩  | **Code Quality**  | <ul><li>Codebase maintains high code quality standards with consistent formatting and linting rules defined in `pyproject.toml`.</li><li>Utilizes essential libraries like `<scikit-learn>`, `<numpy>`, and `<pandas>` for efficient data manipulation and processing.</li><li>Includes detailed documentation within code files to enhance readability and maintainability.</li></ul>                                            |
+| 📄  | **Documentation** | <ul><li>Extensive documentation in various formats (e.g., `<ipynb>`, `<py>`) covering dataset generation, model evaluation, and application interfaces.</li><li>Usage of `<pip>` for managing dependencies and providing clear installation instructions in `requirements.txt`.</li><li>Documentation includes detailed explanations of code files and their roles within the project architecture.</li></ul>                     |
+| 🔌  | **Integrations**  | <ul><li>Integrates with external libraries and frameworks like `<langchain>`, `<langgraph>`, and `<langchainhub>` for enhanced language processing capabilities.</li><li>FastAPI endpoint in `api.py` enables seamless integration of NeuroRAG model for answering queries based on pre-loaded documents.</li><li>Utilizes Streamlit chatbot interface in `app.py` for user interaction and content display.</li></ul>            |
+| 🧩  |  **Modularity**   | <ul><li>Project design emphasizes modularity with distinct components like retrievers, chains, and document grading for specific tasks.</li><li>Each chain (e.g., `FusingChain`, `GenerationChain`) encapsulates logic for specific operations, promoting reusability and maintainability.</li><li>Modular approach allows for easy scalability and extension of functionality through additional chains or components.</li></ul> |
+| 🧪  |    **Testing**    | <ul><li>Testing commands provided in documentation for running tests using `<pytest>` to ensure code functionality and reliability.</li><li>Test files likely exist within the codebase to validate different components and functionalities.</li><li>Test-driven development approach may be employed to maintain code quality and prevent regressions.</li></ul>                                                                |
+| ⚡️ |  **Performance**  | <ul><li>Utilizes advanced language models like `<GPT>`, `<OpenBio>`, and `<Mistral>` for generating responses and enhancing performance.</li><li>Efficient data retrieval and processing mechanisms in chains like `NCBIRetriever` and `HyDEChain` contribute to overall system performance.</li><li>Performance optimization likely implemented through parallel execution and query optimization strategies.</li></ul>          |
 
 </details>
 
 ---
 
-##  Project Structure
+## Project Structure
 
 <details closed>
 
@@ -228,9 +227,11 @@ Performance metrics (Cosine Similarity, BLEU, ROUGE-1, ROUGE-L) on the MEDIQA Da
     ├── pyproject.toml
     └── requirements.txt
 ```
+
 </details>
 
-###  Project Index
+### Project Index
+
 <details open>
 	<summary><b><code>NEURORAG/</code></b></summary>
 	<details> <!-- __root__ Submodule -->
@@ -305,7 +306,7 @@ Performance metrics (Cosine Similarity, BLEU, ROUGE-1, ROUGE-L) on the MEDIQA Da
 					</tr>
 					<tr>
 						<td><b><a href='https://github.com/Biomed-imaging-lab/NeuroRAG/blob/master/neurorag/chains/ncbi_protein.py'>ncbi_protein.py</a></b></td>
-						<td>- Facilitates transforming user queries into precise NCBI protein database searches<br>- Utilizes Pydantic for schema validation and RetryOutputParser for handling retries<br>- Implements a chain of operations including prompt generation, language model processing, and data retrieval<br>- Enables efficient query optimization for bioinformatics experts.</td>
+						<td>- Facilitates transforming user queries into precise NCBI protein database searches<br>- Utilizes Pydantic for schema validation and RetryWithErrorOutputParser for handling retries<br>- Implements a chain of operations including prompt generation, language model processing, and data retrieval<br>- Enables efficient query optimization for bioinformatics experts.</td>
 					</tr>
 					<tr>
 						<td><b><a href='https://github.com/Biomed-imaging-lab/NeuroRAG/blob/master/neurorag/chains/hyde.py'>hyde.py</a></b></td>
@@ -321,7 +322,7 @@ Performance metrics (Cosine Similarity, BLEU, ROUGE-1, ROUGE-L) on the MEDIQA Da
 					</tr>
 					<tr>
 						<td><b><a href='https://github.com/Biomed-imaging-lab/NeuroRAG/blob/master/neurorag/chains/route.py'>route.py</a></b></td>
-						<td>- Defines a RouteChain class that orchestrates retrieval methods for user questions<br>- It leverages Pydantic for data validation and RetryOutputParser for error handling<br>- The class encapsulates a chain of operations, including prompts, language models, and JSON extraction, to process user queries effectively.</td>
+						<td>- Defines a RouteChain class that orchestrates retrieval methods for user questions<br>- It leverages Pydantic for data validation and RetryWithErrorOutputParser for error handling<br>- The class encapsulates a chain of operations, including prompts, language models, and JSON extraction, to process user queries effectively.</td>
 					</tr>
 					<tr>
 						<td><b><a href='https://github.com/Biomed-imaging-lab/NeuroRAG/blob/master/neurorag/chains/json_extractor.py'>json_extractor.py</a></b></td>
@@ -329,7 +330,7 @@ Performance metrics (Cosine Similarity, BLEU, ROUGE-1, ROUGE-L) on the MEDIQA Da
 					</tr>
 					<tr>
 						<td><b><a href='https://github.com/Biomed-imaging-lab/NeuroRAG/blob/master/neurorag/chains/document_grade.py'>document_grade.py</a></b></td>
-						<td>- Implement a document grading chain that assesses document relevance to a user query<br>- Utilizes Pydantic for schema validation and RetryOutputParser for error handling<br>- The chain orchestrates prompts, language models, and JSON extraction to evaluate and assign a binary relevance score ('yes' or 'no') based on keyword and semantic alignment between the query and document.</td>
+						<td>- Implement a document grading chain that assesses document relevance to a user query<br>- Utilizes Pydantic for schema validation and RetryWithErrorOutputParser for error handling<br>- The chain orchestrates prompts, language models, and JSON extraction to evaluate and assign a binary relevance score ('yes' or 'no') based on keyword and semantic alignment between the query and document.</td>
 					</tr>
 					<tr>
 						<td><b><a href='https://github.com/Biomed-imaging-lab/NeuroRAG/blob/master/neurorag/chains/ncbi_gene.py'>ncbi_gene.py</a></b></td>
@@ -426,34 +427,35 @@ The code file `llm-blender.ipynb` in the `notebooks` directory serves the purpos
 </details>
 
 ---
-##  Getting Started
 
-###  Prerequisites
+## Getting Started
+
+### Prerequisites
 
 Before getting started with NeuroRAG, ensure your runtime environment meets the following requirements:
 
 - **Programming Language:** Python
 - **Package Manager:** Pip
 
-
-###  Installation
+### Installation
 
 Install NeuroRAG using one of the following methods:
 
 **Build from source:**
 
 1. Clone the NeuroRAG repository:
+
 ```sh
 ❯ git clone https://github.com/Biomed-imaging-lab/NeuroRAG
 ```
 
 2. Navigate to the project directory:
+
 ```sh
 ❯ cd NeuroRAG
 ```
 
 3. Install the project dependencies:
-
 
 **Using `pip`** &nbsp; [<img align="center" src="https://img.shields.io/badge/Pip-3776AB.svg?style={badge_style}&logo=pypi&logoColor=white" />](https://pypi.org/project/pip/)
 
@@ -461,7 +463,8 @@ Install NeuroRAG using one of the following methods:
 ❯ pip install -r requirements.txt
 ```
 
-###  Usage
+### Usage
+
 Run NeuroRAG streamlit app using the following command:
 
 ```sh
@@ -474,7 +477,7 @@ Run NeuroRAG streamlit app using the following command:
 
 ---
 
-##  Contributing
+## Contributing
 
 - **💬 [Join the Discussions](https://github.com/Biomed-imaging-lab/NeuroRAG/discussions)**: Share your insights, provide feedback, or ask questions.
 - **🐛 [Report Issues](https://github.com/Biomed-imaging-lab/NeuroRAG/issues)**: Submit bugs found or log feature requests for the `NeuroRAG` project.
@@ -517,7 +520,7 @@ Run NeuroRAG streamlit app using the following command:
 
 ---
 
-##  License
+## License
 
 This project is protected under the Apache License 2.0 License. For more details, refer to the [LICENSE](https://choosealicense.com/licenses/) file.
 

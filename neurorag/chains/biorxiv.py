@@ -2,10 +2,8 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
-from langchain.output_parsers import RetryOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnableLambda, RunnableParallel
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 from neurorag.chains.json_extractor import JsonExtractor
 from neurorag.retrievers.BioRxivRetriever import BioRxivRetriever, MedRxivRetriever
@@ -64,19 +62,17 @@ prompt = PromptTemplate(
 class BioRxivChain:
   def __init__(self, llm, database: Literal['biorxiv', 'medrxiv'] = 'biorxiv') -> None:
     self.database = database
-    retry_parser = RetryOutputParser.from_llm(
-      parser=parser,
-      llm=llm,
-      max_retries=3,
-    )
-
-    self.chain = RunnableParallel(
-      completion=prompt | llm | StrOutputParser() | JsonExtractor(), prompt_value=prompt
-    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
+    self.parse_chain = (
+      prompt
+      | llm
+      | StrOutputParser()
+      | JsonExtractor()
+      | parser
+    ).with_retry(stop_after_attempt=3)
 
   def invoke(self, query: str) -> list[Document]:
     try:
-      result = self.chain.invoke({'query': query})
+      result = self.parse_chain.invoke({'query': query})
       query, category = result.query, result.category
     except Exception:
       category = None

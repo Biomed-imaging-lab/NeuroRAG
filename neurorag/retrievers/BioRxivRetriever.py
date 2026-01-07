@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Literal, Optional
 
 from langchain_core.retrievers import BaseRetriever
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_community.retrievers import BM25Retriever
 

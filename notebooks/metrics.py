@@ -3,14 +3,15 @@ import string
 import numpy as np
 from unidecode import unidecode
 from sklearn.metrics.pairwise import cosine_similarity
-from langchain.storage import LocalFileStore
-from langchain.embeddings.cache import CacheBackedEmbeddings
-from langchain_community.embeddings import OllamaEmbeddings
 from rouge_score import rouge_scorer
 from FactScoreLite import FactScore
 from summac.model_summac import SummaCZS, SummaCConv
 from bert_score import score as bert_score
 from typing import Optional
+from neurorag.models.OpenRouterEmbeddings import OpenRouterEmbeddings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 dict_ids: list[str] = [
   'punkt_tab',
@@ -40,14 +41,7 @@ def preprocess(corpus: str) -> str:
   return corpus
 
 
-embeddings = OllamaEmbeddings(model='llama3.1')
-store = LocalFileStore('./.embeddings_cache')
-
-cached_embeddings = CacheBackedEmbeddings.from_bytes_store(
-  embeddings,
-  store,
-  namespace=embeddings.model,
-)
+embeddings = OpenRouterEmbeddings(model='openai/text-embedding-3-small')
 
 
 def embeddings_cosine_sim_metric(
@@ -60,8 +54,8 @@ def embeddings_cosine_sim_metric(
     expected_answer = preprocess(expected_answer)
     predicted_answer = preprocess(predicted_answer)
 
-    expected_embedding = np.array(cached_embeddings.embed_query(expected_answer))
-    predicted_embedding = np.array(cached_embeddings.embed_query(predicted_answer))
+    expected_embedding = np.array(embeddings.embed_query(expected_answer))
+    predicted_embedding = np.array(embeddings.embed_query(predicted_answer))
 
     sim = cosine_similarity(
       expected_embedding.reshape(1, -1),

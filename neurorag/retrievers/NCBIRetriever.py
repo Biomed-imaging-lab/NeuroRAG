@@ -2,7 +2,7 @@ import os
 from Bio import Entrez, SeqIO
 
 from langchain_core.retrievers import BaseRetriever
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 
 db_params = {

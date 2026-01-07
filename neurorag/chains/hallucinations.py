@@ -1,9 +1,7 @@
 from pydantic import BaseModel, Field
 
 from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
-from langchain.output_parsers import RetryOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnableLambda, RunnableParallel
 
 from neurorag.chains.json_extractor import JsonExtractor
 
@@ -38,15 +36,13 @@ prompt = PromptTemplate(
 
 class HallucinationsChain:
   def __init__(self, llm):
-    retry_parser = RetryOutputParser.from_llm(
-      parser=parser,
-      llm=llm,
-      max_retries=3,
-    )
-
-    self.chain = RunnableParallel(
-      completion=prompt | llm | StrOutputParser() | JsonExtractor(), prompt_value=prompt
-    ) | RunnableLambda(lambda x: retry_parser.parse_with_prompt(**x))
+    self.chain = (
+      prompt
+      | llm
+      | StrOutputParser()
+      | JsonExtractor()
+      | parser
+    ).with_retry(stop_after_attempt=3)
 
   def invoke(self, generation: str, documents: str) -> str:
     return self.chain.invoke(

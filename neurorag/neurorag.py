@@ -1,11 +1,12 @@
+import os
 import operator
+import chromadb
 from typing import Annotated, Literal
 from typing_extensions import TypedDict
+from dotenv import load_dotenv
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_chroma import Chroma
-from langchain.embeddings.cache import CacheBackedEmbeddings
-from langchain.storage import LocalFileStore
 from langgraph.graph import START, END, StateGraph
 from langchain_community.retrievers import (
   PubMedRetriever,
@@ -28,6 +29,14 @@ from neurorag.chains.biorxiv import BioRxivChain, MedRxivChain
 from neurorag.chains.generation import GenerationChain
 from neurorag.models.OpenRouter import OpenRouter
 from neurorag.models.OpenRouterEmbeddings import OpenRouterEmbeddings
+
+load_dotenv()
+
+# Chroma cloud configuration
+CHROMA_API_KEY = os.getenv('CHROMA_API_KEY')
+CHROMA_TENANT = os.getenv('CHROMA_TENANT')
+CHROMA_DATABASE = os.getenv('CHROMA_DATABASE', 'neurorag')
+CHROMA_COLLECTION_NAME = os.getenv('CHROMA_COLLECTION_NAME', 'documents')
 
 
 class GraphStateSchema(TypedDict):
@@ -70,18 +79,17 @@ class NeuroRAG:
     self.embeddings_model = embeddings_model
 
   def compile(self) -> None:
-    embeddings = OpenRouterEmbeddings(model=self.embeddings_model)
-    embeddings_store = LocalFileStore('./.embeddings_cache')
-    self.embeddings = CacheBackedEmbeddings.from_bytes_store(
-      embeddings,
-      embeddings_store,
-      namespace=embeddings.model,
-    )
+    self.embeddings = OpenRouterEmbeddings(model=self.embeddings_model)
 
+    chroma_client = chromadb.CloudClient(
+      tenant=CHROMA_TENANT,
+      database=CHROMA_DATABASE,
+      api_key=CHROMA_API_KEY,
+    )
     self.vector_store = Chroma(
-      collection_name='neurorag',
+      client=chroma_client,
+      collection_name=CHROMA_COLLECTION_NAME,
       embedding_function=self.embeddings,
-      persist_directory='../chroma_db',
     )
     self.vector_store_retriever = self.vector_store.as_retriever()
     self.pub_med_retriever = PubMedRetriever(top_k_results=5)
