@@ -49,11 +49,6 @@ class GenerationChain:
     self.llms = llms or {
       'gpt': ChatOpenAI(model='gpt-4.1', temperature=temperature),
       'mistral': OpenRouter(model='mistralai/mistral-large', temperature=temperature),
-      'biomistral': Ollama(
-        model='cniongolo/biomistral',
-        temperature=temperature,
-        base_url=ollama_server_url,
-      ),
     }
 
   def __fuse_responses(self, responses_dict, *args):
