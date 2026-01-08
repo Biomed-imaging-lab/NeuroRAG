@@ -47,7 +47,7 @@ class GenerationChain:
     self.fusing_chain = FusingChain()
     self.temperature = temperature
     self.llms = llms or {
-      'gpt': ChatOpenAI(model='gpt-4.1', temperature=temperature),
+      'gpt': OpenRouter(model='openai/gpt-4.1', temperature=temperature),
       'mistral': OpenRouter(model='mistralai/mistral-large', temperature=temperature),
     }
 
