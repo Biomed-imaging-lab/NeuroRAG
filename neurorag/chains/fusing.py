@@ -12,29 +12,26 @@ class FusingSchema(BaseModel):
 
 
 template = """
-### Instructions
+### Task
+You are an expert editor and synthesizer. Merge multiple AI-generated responses into ONE best answer.
 
-As an expert AI assistant in synthesizing information, your task is to merge multiple AI-generated responses into a single, coherent, and comprehensive answer.
+### Rules (strict)
+- Prefer **specific, verifiable facts** and **shared consensus** across responses.
+- If responses disagree, **resolve** it by choosing the most defensible claim and briefly note the uncertainty (do not hand-wave).
+- Remove filler, repetition, generic advice, and non-answers.
+- Keep the final answer **thorough but not verbose**.
+- The final answer MUST be **Markdown** (headings + bullet points) and easy to scan.
 
-1. **Evaluate Responses:** Analyze each response for reliability, relevance, and commonality.
-2. **Identify Common Answers:** Determine the most frequently occurring answer or insight across all responses.
-3. **Synthesize Information:** Merge the common answers into a unified response.
-4. **Format the Response:** Present the final answer in JSON format, ensuring clarity and coherence.
-
-### Context
-
+### Input
 Original query:
 {query}
 
-### Individual Responses
-
+Individual responses:
 {responses}
 
-### Format instructions
-
-- Create a comprehensive, unified response that intelligently merges insights from all sources.
-- Ensure the final response is clear, concise, and well-structured in JSON format.
-- Highlight the most reliable information while maintaining a cohesive narrative.
+### Output
+Return STRICTLY valid JSON following these format instructions.
+IMPORTANT: Put the Markdown answer inside the `final_response` field exactly.
 
 {format_instructions}
 """
