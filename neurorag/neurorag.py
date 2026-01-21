@@ -22,7 +22,6 @@ from neurorag.chains.hallucinations import HallucinationsChain
 from neurorag.chains.answer_grade import AnswerGradeChain
 from neurorag.chains.hyde import HyDEChain
 from neurorag.chains.step_back import StepBackChain
-from neurorag.chains.query_rewriting import QueryRewritingChain
 from neurorag.chains.decomposition import DecompositionChain
 from neurorag.chains.ncbi_protein import NCBIProteinChain
 from neurorag.chains.ncbi_gene import NCBIGeneChain
@@ -46,7 +45,6 @@ class GraphStateSchema(TypedDict):
   specialized_sources: list[str]
 
   step_back_query: str
-  rewritten_query: str
   subqueries: list[str]
 
   generated_documents: list[str]
@@ -99,7 +97,6 @@ class NeuroRAG:
     self.route_chain = RouteChain(self.llm)
     self.hyde_chain = HyDEChain(self.llm)
     self.step_back_chain = StepBackChain(self.llm)
-    self.query_rewrite_chain = QueryRewritingChain(self.llm)
     self.decomposition_chain = DecompositionChain(self.llm)
     self.ncbi_protein_db_chain = NCBIProteinChain(self.llm)
     self.ncbi_gene_db_chain = NCBIGeneChain(self.llm)
@@ -118,7 +115,6 @@ class NeuroRAG:
     )
 
     workflow.add_node('generate_step_back_query', self.generate_step_back_query_node)
-    workflow.add_node('generate_rewritten_query', self.generate_rewritten_query_node)
     workflow.add_node('generate_subqueries', self.generate_subqueries_node)
 
     workflow.add_node('generate_hyde_documents', self.generate_hyde_documents_node)
@@ -135,9 +131,7 @@ class NeuroRAG:
     workflow.add_node('generate', self.generate_node)
     workflow.add_node('grade_documents', self.grade_documents_node)
 
-    workflow.add_edge(START, 'generate_rewritten_query')
-
-    workflow.add_edge('generate_rewritten_query', 'generate_step_back_query')
+    workflow.add_edge(START, 'generate_step_back_query')
     workflow.add_edge('generate_step_back_query', 'generate_subqueries')
     workflow.add_edge('generate_subqueries', 'determine_specialized_sources')
 
@@ -192,13 +186,13 @@ class NeuroRAG:
     return result
 
   def determine_specialized_src_node(self, state):
-    rewritten_query = state['rewritten_query']
+    query = state['query']
 
     if self.debug:
       print('---DETERMINE SPECIALIZED SOURCES---')
 
     try:
-      sources = self.route_chain.invoke(rewritten_query)
+      sources = self.route_chain.invoke(query)
       specialized_sources = [source.strip().lower() for source in sources]
     except Exception as e:
       if self.debug:
@@ -235,21 +229,6 @@ class NeuroRAG:
 
     return {'step_back_query': step_back_query}
 
-  def generate_rewritten_query_node(self, state: GraphStateSchema):
-    query = state['query']
-
-    if self.debug:
-      print('---GENERATE REWRITTEN QUERY---')
-
-    try:
-      rewritten_query = self.query_rewrite_chain.invoke(query)
-    except Exception as e:
-      if self.debug:
-        print('generate_rewritten_query_node', e)
-      rewritten_query = query
-
-    return {'rewritten_query': rewritten_query}
-
   def generate_subqueries_node(self, state: GraphStateSchema):
     query = state['query']
 
@@ -271,13 +250,12 @@ class NeuroRAG:
   def generate_hyde_documents_node(self, state: GraphStateSchema):
     query = state['query']
     step_back_query = state['step_back_query']
-    rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
     if self.debug:
       print('---GENERATE HYDE DOCUMENTS---')
 
-    queries = [query, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, *subqueries]
 
     async def generate_all_hyde_documents():
       tasks = [self.hyde_chain.ainvoke(q) for q in queries]
@@ -308,7 +286,6 @@ class NeuroRAG:
     specialized_sources = state['specialized_sources']
     query = state['query']
     step_back_query = state['step_back_query']
-    rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
     if 'pubmed' not in specialized_sources:
@@ -317,7 +294,7 @@ class NeuroRAG:
     if self.debug:
       print('---RETRIEVE FROM PUBMED---')
 
-    queries = [query, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, *subqueries]
     documents = []
 
     for query in queries:
@@ -336,7 +313,6 @@ class NeuroRAG:
     specialized_sources = state['specialized_sources']
     query = state['query']
     step_back_query = state['step_back_query']
-    rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
     if 'arxiv' not in specialized_sources:
@@ -345,7 +321,7 @@ class NeuroRAG:
     if self.debug:
       print('---RETRIEVE FROM ARXIV---')
 
-    queries = [query, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, *subqueries]
     documents = []
 
     for query in queries:
@@ -371,10 +347,9 @@ class NeuroRAG:
 
     query = state['query']
     step_back_query = state['step_back_query']
-    rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
-    queries = [query, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, *subqueries]
     documents = []
 
     for query in queries:
@@ -398,10 +373,9 @@ class NeuroRAG:
 
     query = state['query']
     step_back_query = state['step_back_query']
-    rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
-    queries = [query, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, *subqueries]
     documents = []
 
     for query in queries:
@@ -424,10 +398,9 @@ class NeuroRAG:
 
     query = state['query']
     step_back_query = state['step_back_query']
-    rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
-    queries = [query, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, *subqueries]
     documents = []
 
     for query in queries:
@@ -450,10 +423,9 @@ class NeuroRAG:
 
     query = state['query']
     step_back_query = state['step_back_query']
-    rewritten_query = state['rewritten_query']
     subqueries = state['subqueries']
 
-    queries = [query, step_back_query, rewritten_query, *subqueries]
+    queries = [query, step_back_query, *subqueries]
     documents = []
 
     for query in queries:
@@ -466,7 +438,7 @@ class NeuroRAG:
     return {'documents': documents}
 
   def grade_documents_node(self, state: GraphStateSchema):
-    rewritten_query = state['rewritten_query']
+    query = state['query']
     documents = state['documents']
 
     if self.debug:
@@ -481,13 +453,13 @@ class NeuroRAG:
       print(f'---AFTER EXACT DEDUPLICATION: {len(unique_documents)} documents---')
 
     retriever = BM25Retriever.from_documents(unique_documents)
-    retrieved_documents = retriever.invoke(rewritten_query)
+    retrieved_documents = retriever.invoke(query)
 
     filtered_documents = []
 
     for document in retrieved_documents:
       try:
-        grade = self.document_grade_chain.invoke(rewritten_query, document)
+        grade = self.document_grade_chain.invoke(query, document)
       except Exception as e:
         if self.debug:
           print('grade_documents_node', e)
