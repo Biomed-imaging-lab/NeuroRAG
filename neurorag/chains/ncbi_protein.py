@@ -37,12 +37,8 @@ class NCBIProteinChain:
     self.retriever = NCBIRetriever(db='protein', k=3)
 
     self.parse_chain = (
-      prompt
-      | llm
-      | StrOutputParser()
-      | JsonExtractor()
-      | parser
-    ).with_retry(stop_after_attempt=3)
+      prompt | llm | StrOutputParser() | JsonExtractor() | parser
+    ).with_retry(stop_after_attempt=2)
 
   def invoke(self, query: str) -> list[Document]:
     result = self.parse_chain.invoke({'query': query})

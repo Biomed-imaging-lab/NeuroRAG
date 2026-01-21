@@ -38,12 +38,12 @@ prompt = PromptTemplate(
 class DocumentGradeChain:
   def __init__(self, llm):
     self.chain = (
-      prompt
-      | llm
-      | StrOutputParser()
-      | JsonExtractor()
-      | parser
-    ).with_retry(stop_after_attempt=3)
+      prompt | llm | StrOutputParser() | JsonExtractor() | parser
+    ).with_retry(stop_after_attempt=2)
 
   def invoke(self, query: str, document: str) -> str:
     return self.chain.invoke({'query': query, 'document': document}).binary_score
+
+  async def ainvoke(self, query: str, document: str) -> str:
+    result = await self.chain.ainvoke({'query': query, 'document': document})
+    return result.binary_score

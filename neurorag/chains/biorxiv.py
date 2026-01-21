@@ -63,12 +63,8 @@ class BioRxivChain:
   def __init__(self, llm, database: Literal['biorxiv', 'medrxiv'] = 'biorxiv') -> None:
     self.database = database
     self.parse_chain = (
-      prompt
-      | llm
-      | StrOutputParser()
-      | JsonExtractor()
-      | parser
-    ).with_retry(stop_after_attempt=3)
+      prompt | llm | StrOutputParser() | JsonExtractor() | parser
+    ).with_retry(stop_after_attempt=2)
 
   def invoke(self, query: str) -> list[Document]:
     try:

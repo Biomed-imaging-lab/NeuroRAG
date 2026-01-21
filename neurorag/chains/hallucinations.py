@@ -37,12 +37,8 @@ prompt = PromptTemplate(
 class HallucinationsChain:
   def __init__(self, llm):
     self.chain = (
-      prompt
-      | llm
-      | StrOutputParser()
-      | JsonExtractor()
-      | parser
-    ).with_retry(stop_after_attempt=3)
+      prompt | llm | StrOutputParser() | JsonExtractor() | parser
+    ).with_retry(stop_after_attempt=2)
 
   def invoke(self, generation: str, documents: str) -> str:
     return self.chain.invoke(

@@ -2,6 +2,7 @@ import os
 import operator
 import asyncio
 import chromadb
+from datetime import datetime
 from typing import Annotated, Literal
 from typing_extensions import TypedDict
 from dotenv import load_dotenv
@@ -66,7 +67,7 @@ class NeuroRAG:
     temperature: float = 0,
     debug: bool = False,
     generation_prompt=None,
-    max_retries: int = 2,
+    max_retries: int = 1,
     llms=None,
   ) -> None:
     self.temperature = temperature
@@ -76,6 +77,12 @@ class NeuroRAG:
     self.llms = llms
     self.llm = OpenRouter(model=model, temperature=self.temperature)
     self.embeddings_model = embeddings_model
+
+  def _debug_print(self, *args, **kwargs):
+    """Print with timestamp if debug mode is enabled."""
+    if self.debug:
+      timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+      print(f'[{timestamp}]', *args, **kwargs)
 
   def compile(self) -> None:
     self.embeddings = OpenRouterEmbeddings(model=self.embeddings_model)
@@ -91,7 +98,7 @@ class NeuroRAG:
       embedding_function=self.embeddings,
     )
     self.vector_store_retriever = self.vector_store.as_retriever()
-    self.pub_med_retriever = PubMedRetriever(top_k_results=5)
+    self.pub_med_retriever = PubMedRetriever(top_k_results=3)
     self.arxiv_retriever = ArxivRetriever(load_max_docs=3, get_full_documents=True)
 
     self.route_chain = RouteChain(self.llm)
@@ -188,19 +195,16 @@ class NeuroRAG:
   def determine_specialized_src_node(self, state):
     query = state['query']
 
-    if self.debug:
-      print('---DETERMINE SPECIALIZED SOURCES---')
+    self._debug_print('---DETERMINE SPECIALIZED SOURCES---')
 
     try:
       sources = self.route_chain.invoke(query)
       specialized_sources = [source.strip().lower() for source in sources]
     except Exception as e:
-      if self.debug:
-        print('determine_specialized_src_node', e)
+      self._debug_print('determine_specialized_src_node', e)
       specialized_sources = []
 
-    if self.debug:
-      print(f'---SELECTED SOURCES: {specialized_sources}---')
+    self._debug_print(f'---SELECTED SOURCES: {specialized_sources}---')
 
     return {'specialized_sources': specialized_sources}
 
@@ -209,22 +213,19 @@ class NeuroRAG:
   ) -> Literal['websearch', 'specialized_sources']:
     sources = state['specialized_sources']
 
-    if self.debug:
-      print('---ROUTE QUESTION---')
+    self._debug_print('---ROUTE QUESTION---')
 
     return 'websearch' if len(sources) == 0 else 'specialized_sources'
 
   def generate_step_back_query_node(self, state: GraphStateSchema):
     query = state['query']
 
-    if self.debug:
-      print('---GENERATE STEP-BACK QUERY---')
+    self._debug_print('---GENERATE STEP-BACK QUERY---')
 
     try:
       step_back_query = self.step_back_chain.invoke(query)
     except Exception as e:
-      if self.debug:
-        print('generate_step_back_query_node', e)
+      self._debug_print('generate_step_back_query_node', e)
       step_back_query = query
 
     return {'step_back_query': step_back_query}
@@ -232,18 +233,16 @@ class NeuroRAG:
   def generate_subqueries_node(self, state: GraphStateSchema):
     query = state['query']
 
-    if self.debug:
-      print('---GENERATE SUBQUERIES---')
+    self._debug_print('---GENERATE SUBQUERIES---')
 
     subqueries: list[str] = []
 
     try:
       subqueries = self.decomposition_chain.invoke(query)
-      # Limit to a maximum of four subqueries
-      subqueries = subqueries[:4]
+      # Limit to a maximum of 2 subqueries for faster retrieval
+      subqueries = subqueries[:2]
     except Exception as e:
-      if self.debug:
-        print('generate_subqueries_node', e)
+      self._debug_print('generate_subqueries_node', e)
 
     return {'subqueries': subqueries}
 
@@ -252,8 +251,7 @@ class NeuroRAG:
     step_back_query = state['step_back_query']
     subqueries = state['subqueries']
 
-    if self.debug:
-      print('---GENERATE HYDE DOCUMENTS---')
+    self._debug_print('---GENERATE HYDE DOCUMENTS---')
 
     queries = [query, step_back_query, *subqueries]
 
@@ -272,8 +270,7 @@ class NeuroRAG:
     if 'vectorstore' not in specialized_sources:
       return {'documents': []}
 
-    if self.debug:
-      print('---RETRIEVE FROM VECTOR STORE---')
+    self._debug_print('---RETRIEVE FROM VECTOR STORE---')
 
     documents = []
 
@@ -291,8 +288,7 @@ class NeuroRAG:
     if 'pubmed' not in specialized_sources:
       return {'documents': []}
 
-    if self.debug:
-      print('---RETRIEVE FROM PUBMED---')
+    self._debug_print('---RETRIEVE FROM PUBMED---')
 
     queries = [query, step_back_query, *subqueries]
     documents = []
@@ -301,8 +297,7 @@ class NeuroRAG:
       try:
         documents.extend(self.pub_med_retriever.invoke(query))
       except Exception as e:
-        if self.debug:
-          print('pub_med_retriever_node', e)
+        self._debug_print('pub_med_retriever_node', e)
 
     for document in documents:
       document.metadata['source'] = document.metadata['Title']
@@ -318,8 +313,7 @@ class NeuroRAG:
     if 'arxiv' not in specialized_sources:
       return {'documents': []}
 
-    if self.debug:
-      print('---RETRIEVE FROM ARXIV---')
+    self._debug_print('---RETRIEVE FROM ARXIV---')
 
     queries = [query, step_back_query, *subqueries]
     documents = []
@@ -328,8 +322,7 @@ class NeuroRAG:
       try:
         documents.extend(self.arxiv_retriever.invoke(query))
       except Exception as e:
-        if self.debug:
-          print('arxiv_retriever_node', e)
+        self._debug_print('arxiv_retriever_node', e)
 
     for document in documents:
       document.metadata['source'] = document.metadata['Title']
@@ -342,8 +335,7 @@ class NeuroRAG:
     if 'ncbi_protein' not in specialized_sources:
       return {'documents': []}
 
-    if self.debug:
-      print('---RETRIEVE FROM NCBI PROTEIN DB---')
+    self._debug_print('---RETRIEVE FROM NCBI PROTEIN DB---')
 
     query = state['query']
     step_back_query = state['step_back_query']
@@ -356,8 +348,7 @@ class NeuroRAG:
       try:
         documents.extend(self.ncbi_protein_db_chain.invoke(query))
       except Exception as e:
-        if self.debug:
-          print('ncbi_protein_db_retriever_node', e)
+        self._debug_print('ncbi_protein_db_retriever_node', e)
         pass
 
     return {'documents': documents}
@@ -368,8 +359,7 @@ class NeuroRAG:
     if 'ncbi_gene' not in specialized_sources:
       return {'documents': []}
 
-    if self.debug:
-      print('---RETRIEVE FROM NCBI GENE DB---')
+    self._debug_print('---RETRIEVE FROM NCBI GENE DB---')
 
     query = state['query']
     step_back_query = state['step_back_query']
@@ -382,8 +372,7 @@ class NeuroRAG:
       try:
         documents.extend(self.ncbi_gene_db_chain.invoke(query))
       except Exception as e:
-        if self.debug:
-          print('ncbi_gene_db_retriever_node', e)
+        self._debug_print('ncbi_gene_db_retriever_node', e)
 
     return {'documents': documents}
 
@@ -393,8 +382,7 @@ class NeuroRAG:
     if 'biorxiv' not in specialized_sources:
       return {'documents': []}
 
-    if self.debug:
-      print('---RETRIEVE FROM BIORXIV---')
+    self._debug_print('---RETRIEVE FROM BIORXIV---')
 
     query = state['query']
     step_back_query = state['step_back_query']
@@ -407,8 +395,7 @@ class NeuroRAG:
       try:
         documents.extend(self.biorxiv_chain.invoke(query))
       except Exception as e:
-        if self.debug:
-          print('biorxiv_retriever_node', e)
+        self._debug_print('biorxiv_retriever_node', e)
 
     return {'documents': documents}
 
@@ -418,8 +405,7 @@ class NeuroRAG:
     if 'medrxiv' not in specialized_sources:
       return {'documents': []}
 
-    if self.debug:
-      print('---RETRIEVE FROM MEDRXIV---')
+    self._debug_print('---RETRIEVE FROM MEDRXIV---')
 
     query = state['query']
     step_back_query = state['step_back_query']
@@ -432,8 +418,7 @@ class NeuroRAG:
       try:
         documents.extend(self.medrxiv_chain.invoke(query))
       except Exception as e:
-        if self.debug:
-          print('medrxiv_retriever_node', e)
+        self._debug_print('medrxiv_retriever_node', e)
 
     return {'documents': documents}
 
@@ -441,37 +426,42 @@ class NeuroRAG:
     query = state['query']
     documents = state['documents']
 
-    if self.debug:
-      print('---GRADE DOCUMENTs---')
+    self._debug_print('---GRADE DOCUMENTs---')
 
     if len(documents) == 0:
       return {'documents': [], 'web_search': True}
 
     unique_documents = list({doc.page_content: doc for doc in documents}.values())
 
-    if self.debug:
-      print(f'---AFTER EXACT DEDUPLICATION: {len(unique_documents)} documents---')
+    self._debug_print(
+      f'---AFTER EXACT DEDUPLICATION: {len(unique_documents)} documents---'
+    )
 
-    retriever = BM25Retriever.from_documents(unique_documents)
+    retriever = BM25Retriever.from_documents(unique_documents, k=10)
     retrieved_documents = retriever.invoke(query)
 
-    filtered_documents = []
+    self._debug_print(
+      f'---BM25 TOP CANDIDATES: {len(retrieved_documents)} documents---'
+    )
 
-    for document in retrieved_documents:
-      try:
-        grade = self.document_grade_chain.invoke(query, document)
-      except Exception as e:
-        if self.debug:
-          print('grade_documents_node', e)
-        grade = 'no'
+    # Grade documents in parallel
+    async def grade_all_documents():
+      async def grade_single(doc):
+        try:
+          grade = await self.document_grade_chain.ainvoke(query, doc)
+          return (doc, grade.lower() == 'yes')
+        except Exception as e:
+          self._debug_print('grade_documents_node', e)
+          return (doc, False)
 
-      if grade.lower() == 'yes':
-        filtered_documents.append(document)
+      tasks = [grade_single(doc) for doc in retrieved_documents]
+      return await asyncio.gather(*tasks)
 
+    grading_results = asyncio.run(grade_all_documents())
+    filtered_documents = [doc for doc, is_relevant in grading_results if is_relevant]
     filtered_documents = filtered_documents[:5]
 
-    if self.debug:
-      print(f'---FINAL DOCUMENTS NUMBER: {len(filtered_documents)}---')
+    self._debug_print(f'---FINAL DOCUMENTS NUMBER: {len(filtered_documents)}---')
 
     state['documents'].clear()
     return {
@@ -482,18 +472,15 @@ class NeuroRAG:
   def decide_to_generate_node(self, state: GraphStateSchema):
     web_search = state['web_search']
 
-    if self.debug:
-      print('---ASSESS GRADED DOCUMENTS---')
+    self._debug_print('---ASSESS GRADED DOCUMENTS---')
 
     if web_search:
-      if self.debug:
-        print(
-          '---DECISION: SOME DOCUMENTS ARE NOT RELEVANT TO QUESTION, INCLUDE WEB SEARCH---'
-        )
+      self._debug_print(
+        '---DECISION: SOME DOCUMENTS ARE NOT RELEVANT TO QUESTION, INCLUDE WEB SEARCH---'
+      )
       return 'websearch'
     else:
-      if self.debug:
-        print('---DECISION: GENERATE---')
+      self._debug_print('---DECISION: GENERATE---')
       return 'generate'
 
   def web_search_node(self, state: GraphStateSchema):
@@ -501,8 +488,7 @@ class NeuroRAG:
     web_results: list[Document] = state.get('web_results', [])
     generations_number: int = state.get('generations_number', 0)
 
-    if self.debug:
-      print('---WEB SEARCH---')
+    self._debug_print('---WEB SEARCH---')
 
     if not web_results:
       try:
@@ -512,8 +498,7 @@ class NeuroRAG:
           for result in raw_web_results
         ]
       except Exception as e:
-        if self.debug:
-          print('web_search_node', e)
+        self._debug_print('web_search_node', e)
         web_results = []
 
     new_documents = web_results[generations_number * 3 : generations_number * 3 + 3]
@@ -525,8 +510,7 @@ class NeuroRAG:
     documents = state['documents']
     generations_number = state.get('generations_number', 0)
 
-    if self.debug:
-      print('---GENERATE---')
+    self._debug_print('---GENERATE---')
 
     context = '\n\n'.join(map(lambda doc: doc.page_content, documents))
     generation = self.generation_chain.invoke(query, context, self.generation_prompt)
@@ -541,10 +525,9 @@ class NeuroRAG:
     generation = state['generation']
     generations_number = state['generations_number']
 
-    if self.debug:
-      print('---GRADE GENERATION---')
+    self._debug_print('---GRADE GENERATION---')
 
-    if generations_number >= self.max_retries:
+    if generations_number > self.max_retries:
       return 'useful'
 
     try:
@@ -553,29 +536,25 @@ class NeuroRAG:
       )
       grade = self.hallucinations_chain.invoke(generation, context)
     except Exception as e:
-      if self.debug:
-        print('grade_generation_node hallucinations', e)
+      self._debug_print('grade_generation_node hallucinations', e)
       grade = 'no'
 
     if grade == 'yes':
-      if self.debug:
-        print('---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---')
+      self._debug_print('---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---')
       try:
         grade = self.answer_grade_chain.invoke(query, generation)
       except Exception as e:
-        if self.debug:
-          print('grade_generation_node answer_grade', e)
+        self._debug_print('grade_generation_node answer_grade', e)
         grade = 'no'
 
       if grade == 'yes':
-        if self.debug:
-          print('---DECISION: GENERATION ADDRESSES QUESTION---')
+        self._debug_print('---DECISION: GENERATION ADDRESSES QUESTION---')
         return 'useful'
       else:
-        if self.debug:
-          print('---DECISION: GENERATION DOES NOT ADDRESS QUESTION---')
+        self._debug_print('---DECISION: GENERATION DOES NOT ADDRESS QUESTION---')
         return 'not useful'
     else:
-      if self.debug:
-        print('---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RETRY---')
+      self._debug_print(
+        '---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RETRY---'
+      )
       return 'not supported'

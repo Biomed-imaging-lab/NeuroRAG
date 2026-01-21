@@ -50,7 +50,7 @@ class FusingChain:
     llm = ChatOpenAI(model='gpt-4.1', temperature=0)
     self.chain = (
       prompt | llm | StrOutputParser() | JsonExtractor() | parser
-    ).with_retry(stop_after_attempt=3)
+    ).with_retry(stop_after_attempt=2)
 
   def invoke(self, data: dict) -> str:
     return self.chain.invoke(data).final_response
