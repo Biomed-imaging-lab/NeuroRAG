@@ -432,7 +432,6 @@ if hasattr(st.session_state, 'current_question') and st.session_state.current_qu
 
   with cols[0]:
     st.subheader(f'🧠 {MASKED_NAMES["NeuroRAG"]}')
-    st.markdown('**Answer:**')
     st.write(st.session_state.neurorag_answer)
 
   # Display competitor models in remaining columns
