@@ -502,7 +502,7 @@ class NeuroRAG:
 
     grading_results = asyncio.run(grade_all_documents())
     filtered_documents = [doc for doc, is_relevant in grading_results if is_relevant]
-    filtered_documents = filtered_documents[:5]
+    filtered_documents = filtered_documents[:3]
 
     self._debug_print(f'---FINAL DOCUMENTS NUMBER: {len(filtered_documents)}---')
 
