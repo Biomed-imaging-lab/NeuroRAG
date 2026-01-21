@@ -1,5 +1,6 @@
 import os
 import operator
+import asyncio
 import chromadb
 from typing import Annotated, Literal
 from typing_extensions import TypedDict
@@ -277,11 +278,12 @@ class NeuroRAG:
       print('---GENERATE HYDE DOCUMENTS---')
 
     queries = [query, step_back_query, rewritten_query, *subqueries]
-    generated_documents = []
 
-    for query in queries:
-      generated_document = self.hyde_chain.invoke(query)
-      generated_documents.append(generated_document)
+    async def generate_all_hyde_documents():
+      tasks = [self.hyde_chain.ainvoke(q) for q in queries]
+      return await asyncio.gather(*tasks)
+
+    generated_documents = asyncio.run(generate_all_hyde_documents())
 
     return {'generated_documents': generated_documents}
 
