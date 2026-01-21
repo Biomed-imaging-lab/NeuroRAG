@@ -43,3 +43,7 @@ class NCBIGeneChain:
   def invoke(self, query: str) -> list[Document]:
     result = self.parse_chain.invoke({'query': query})
     return self.retriever.invoke(result.query)
+
+  async def ainvoke(self, query: str) -> list[Document]:
+    result = await self.parse_chain.ainvoke({'query': query})
+    return await self.retriever.ainvoke(result.query)

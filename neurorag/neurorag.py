@@ -272,10 +272,12 @@ class NeuroRAG:
 
     self._debug_print('---RETRIEVE FROM VECTOR STORE---')
 
-    documents = []
+    async def retrieve_all():
+      tasks = [self.vector_store_retriever.ainvoke(doc) for doc in generated_documents]
+      return await asyncio.gather(*tasks)
 
-    for generated_document in generated_documents:
-      documents.extend(self.vector_store_retriever.invoke(generated_document))
+    results = asyncio.run(retrieve_all())
+    documents = [doc for result in results for doc in result]
 
     return {'documents': documents}
 
@@ -291,16 +293,23 @@ class NeuroRAG:
     self._debug_print('---RETRIEVE FROM PUBMED---')
 
     queries = [query, step_back_query, *subqueries]
-    documents = []
 
-    for query in queries:
-      try:
-        documents.extend(self.pub_med_retriever.invoke(query))
-      except Exception as e:
-        self._debug_print('pub_med_retriever_node', e)
+    async def retrieve_all():
+      async def safe_retrieve(q):
+        try:
+          return await self.pub_med_retriever.ainvoke(q)
+        except Exception as e:
+          self._debug_print('pub_med_retriever_node', e)
+          return []
+
+      tasks = [safe_retrieve(q) for q in queries]
+      return await asyncio.gather(*tasks)
+
+    results = asyncio.run(retrieve_all())
+    documents = [doc for result in results for doc in result]
 
     for document in documents:
-      document.metadata['source'] = document.metadata['Title']
+      document.metadata['source'] = document.metadata.get('Title', 'PubMed')
 
     return {'documents': documents}
 
@@ -316,16 +325,23 @@ class NeuroRAG:
     self._debug_print('---RETRIEVE FROM ARXIV---')
 
     queries = [query, step_back_query, *subqueries]
-    documents = []
 
-    for query in queries:
-      try:
-        documents.extend(self.arxiv_retriever.invoke(query))
-      except Exception as e:
-        self._debug_print('arxiv_retriever_node', e)
+    async def retrieve_all():
+      async def safe_retrieve(q):
+        try:
+          return await self.arxiv_retriever.ainvoke(q)
+        except Exception as e:
+          self._debug_print('arxiv_retriever_node', e)
+          return []
+
+      tasks = [safe_retrieve(q) for q in queries]
+      return await asyncio.gather(*tasks)
+
+    results = asyncio.run(retrieve_all())
+    documents = [doc for result in results for doc in result]
 
     for document in documents:
-      document.metadata['source'] = document.metadata['Title']
+      document.metadata['source'] = document.metadata.get('Title', 'arXiv')
 
     return {'documents': documents}
 
@@ -342,14 +358,20 @@ class NeuroRAG:
     subqueries = state['subqueries']
 
     queries = [query, step_back_query, *subqueries]
-    documents = []
 
-    for query in queries:
-      try:
-        documents.extend(self.ncbi_protein_db_chain.invoke(query))
-      except Exception as e:
-        self._debug_print('ncbi_protein_db_retriever_node', e)
-        pass
+    async def retrieve_all():
+      async def safe_retrieve(q):
+        try:
+          return await self.ncbi_protein_db_chain.ainvoke(q)
+        except Exception as e:
+          self._debug_print('ncbi_protein_db_retriever_node', e)
+          return []
+
+      tasks = [safe_retrieve(q) for q in queries]
+      return await asyncio.gather(*tasks)
+
+    results = asyncio.run(retrieve_all())
+    documents = [doc for result in results for doc in result]
 
     return {'documents': documents}
 
@@ -366,13 +388,20 @@ class NeuroRAG:
     subqueries = state['subqueries']
 
     queries = [query, step_back_query, *subqueries]
-    documents = []
 
-    for query in queries:
-      try:
-        documents.extend(self.ncbi_gene_db_chain.invoke(query))
-      except Exception as e:
-        self._debug_print('ncbi_gene_db_retriever_node', e)
+    async def retrieve_all():
+      async def safe_retrieve(q):
+        try:
+          return await self.ncbi_gene_db_chain.ainvoke(q)
+        except Exception as e:
+          self._debug_print('ncbi_gene_db_retriever_node', e)
+          return []
+
+      tasks = [safe_retrieve(q) for q in queries]
+      return await asyncio.gather(*tasks)
+
+    results = asyncio.run(retrieve_all())
+    documents = [doc for result in results for doc in result]
 
     return {'documents': documents}
 
@@ -389,13 +418,20 @@ class NeuroRAG:
     subqueries = state['subqueries']
 
     queries = [query, step_back_query, *subqueries]
-    documents = []
 
-    for query in queries:
-      try:
-        documents.extend(self.biorxiv_chain.invoke(query))
-      except Exception as e:
-        self._debug_print('biorxiv_retriever_node', e)
+    async def retrieve_all():
+      async def safe_retrieve(q):
+        try:
+          return await self.biorxiv_chain.ainvoke(q)
+        except Exception as e:
+          self._debug_print('biorxiv_retriever_node', e)
+          return []
+
+      tasks = [safe_retrieve(q) for q in queries]
+      return await asyncio.gather(*tasks)
+
+    results = asyncio.run(retrieve_all())
+    documents = [doc for result in results for doc in result]
 
     return {'documents': documents}
 
@@ -412,13 +448,20 @@ class NeuroRAG:
     subqueries = state['subqueries']
 
     queries = [query, step_back_query, *subqueries]
-    documents = []
 
-    for query in queries:
-      try:
-        documents.extend(self.medrxiv_chain.invoke(query))
-      except Exception as e:
-        self._debug_print('medrxiv_retriever_node', e)
+    async def retrieve_all():
+      async def safe_retrieve(q):
+        try:
+          return await self.medrxiv_chain.ainvoke(q)
+        except Exception as e:
+          self._debug_print('medrxiv_retriever_node', e)
+          return []
+
+      tasks = [safe_retrieve(q) for q in queries]
+      return await asyncio.gather(*tasks)
+
+    results = asyncio.run(retrieve_all())
+    documents = [doc for result in results for doc in result]
 
     return {'documents': documents}
 

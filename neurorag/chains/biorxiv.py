@@ -1,3 +1,4 @@
+import asyncio
 from pydantic import BaseModel, Field
 from typing import Literal
 
@@ -79,6 +80,23 @@ class BioRxivChain:
       retriever = BioRxivRetriever(k=3, category=category)
 
     return retriever._get_relevant_documents(query, run_manager=None)
+
+  async def ainvoke(self, query: str) -> list[Document]:
+    try:
+      result = await self.parse_chain.ainvoke({'query': query})
+      query, category = result.query, result.category
+    except Exception:
+      category = None
+
+    if self.database == 'medrxiv':
+      retriever = MedRxivRetriever(k=3, category=category)
+    else:
+      retriever = BioRxivRetriever(k=3, category=category)
+
+    # Run sync retriever in thread pool
+    return await asyncio.to_thread(
+      retriever._get_relevant_documents, query, run_manager=None
+    )
 
 
 class MedRxivChain(BioRxivChain):
