@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Literal
 
 from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -6,8 +7,19 @@ from langchain_core.prompts import PromptTemplate
 from neurorag.chains.json_extractor import JsonExtractor
 
 
+Source = Literal[
+  'vectorstore',
+  'pubmed',
+  'arxiv',
+  'biorxiv',
+  'medrxiv',
+  'ncbi_protein',
+  'ncbi_gene',
+]
+
+
 class RouteSchema(BaseModel):
-  sources: list[str] = Field(
+  sources: list[Source] = Field(
     description='Given a user question select the retrieval methods you consider the most appropriate for addressing this question. You may also return an empty array if no methods are required.',
   )
 
