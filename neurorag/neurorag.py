@@ -354,24 +354,12 @@ class NeuroRAG:
     self._debug_print('---RETRIEVE FROM NCBI PROTEIN DB---')
 
     query = state['query']
-    step_back_query = state['step_back_query']
-    subqueries = state['subqueries']
 
-    queries = [query, step_back_query, *subqueries]
-
-    async def retrieve_all():
-      async def safe_retrieve(q):
-        try:
-          return await self.ncbi_protein_db_chain.ainvoke(q)
-        except Exception as e:
-          self._debug_print('ncbi_protein_db_retriever_node', e)
-          return []
-
-      tasks = [safe_retrieve(q) for q in queries]
-      return await asyncio.gather(*tasks)
-
-    results = asyncio.run(retrieve_all())
-    documents = [doc for result in results for doc in result]
+    try:
+      documents = self.ncbi_protein_db_chain.invoke(query)
+    except Exception as e:
+      self._debug_print('ncbi_protein_db_retriever_node', e)
+      documents = []
 
     return {'documents': documents}
 
@@ -384,24 +372,12 @@ class NeuroRAG:
     self._debug_print('---RETRIEVE FROM NCBI GENE DB---')
 
     query = state['query']
-    step_back_query = state['step_back_query']
-    subqueries = state['subqueries']
 
-    queries = [query, step_back_query, *subqueries]
-
-    async def retrieve_all():
-      async def safe_retrieve(q):
-        try:
-          return await self.ncbi_gene_db_chain.ainvoke(q)
-        except Exception as e:
-          self._debug_print('ncbi_gene_db_retriever_node', e)
-          return []
-
-      tasks = [safe_retrieve(q) for q in queries]
-      return await asyncio.gather(*tasks)
-
-    results = asyncio.run(retrieve_all())
-    documents = [doc for result in results for doc in result]
+    try:
+      documents = self.ncbi_gene_db_chain.invoke(query)
+    except Exception as e:
+      self._debug_print('ncbi_gene_db_retriever_node', e)
+      documents = []
 
     return {'documents': documents}
 

@@ -30,13 +30,13 @@ Given a user question select the retrieval methods you consider the most appropr
 You may also return an empty array if no methods are required.
 
 Possible retrieval methods:
-- The "vectorstore" retriever contains documents related to neurobiology and medicine. Use the vectorstore for questions on these topics.
-- The "pubmed" retriever contains biomedical literature and research articles. It is particularly useful for answering detailed questions about medical research, clinical studies, and scientific discoveries.
-- The "arxiv" retriever contains preprints of research papers across various scientific fields, including physics, mathematics, computer science, and biology. Use the arxiv for questions on recent scientific research and theoretical studies in these areas.
-- The "biorxiv" retriever contains preprints specifically in the life sciences, including biology, medicine, and related fields. Use the biorxiv for questions on recent biological and medical research preprints.
-- The "medrxiv" retriever contains medical preprints specifically focused on clinical medicine, epidemiology, and health sciences. Use the medrxiv for questions on recent medical research, clinical trials, and health-related preprints.
-- The "ncbi_protein" retriever contains protein sequence and functional information. Use the NCBI protein DB for questions related to protein sequences, structures, and functions.
-- The "ncbi_gene" retriever contains gene sequence and functional information. Use the NCBI gene DB for questions related to gene sequences, structures, and functions.
+- "vectorstore": Documents about neurobiology and medicine. Use for general medical/neuro questions.
+- "pubmed": Biomedical literature. Use for medical research, clinical studies, scientific discoveries.
+- "arxiv": Scientific preprints. Use for recent research in physics, math, CS, biology.
+- "biorxiv": Life sciences preprints. Use for recent biological research.
+- "medrxiv": Medical preprints. Use for clinical medicine, epidemiology, health sciences.
+- "ncbi_protein": Protein sequences database. Use ONLY when query explicitly mentions a specific protein name, protein ID, or asks about protein sequence/structure of a named protein (e.g., "hemoglobin structure", "P53 protein sequence").
+- "ncbi_gene": Gene sequences database. Use ONLY when query explicitly mentions a specific gene name, gene symbol, locus, or accession number (e.g., "BRCA1 gene", "TP53 mutations", "gene Chr17:1234").
 
 {format_instructions}
 
