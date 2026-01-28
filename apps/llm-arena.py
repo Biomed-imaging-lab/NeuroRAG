@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append('..')
@@ -58,20 +59,25 @@ def get_openrouter_llm(model_name: str) -> Optional[Any]:
     return None
 
 
-def get_neurorag_answer(question: str) -> str:
-  """Get answer from NeuroRAG"""
+def get_neurorag_answer(question: str) -> tuple[str, float]:
+  """Get answer from NeuroRAG with timing"""
+  start_time = time.time()
   neurorag = NeuroRAG(temperature=0, debug=True)
   neurorag.compile()
   result = neurorag.invoke(question)
-  return result.get('generation', 'No answer generated')
+  elapsed_time = time.time() - start_time
+  return result.get('generation', 'No answer generated'), elapsed_time
 
 
-def get_competitor_answer(question: str, model_name: str) -> str:
-  """Get answer from competitor model"""
+def get_competitor_answer(question: str, model_name: str) -> tuple[str, float]:
+  """Get answer from competitor model with timing"""
+  start_time = time.time()
   llm = get_openrouter_llm(model_name)
   if llm:
-    return llm.invoke(question)
-  return 'Error: Could not initialize model'
+    answer = llm.invoke(question)
+    elapsed_time = time.time() - start_time
+    return answer, elapsed_time
+  return 'Error: Could not initialize model', 0.0
 
 
 def save_comparison(
@@ -164,14 +170,14 @@ def evaluate_models_on_dataset(
   # Generate answers for all questions
   with st.spinner('Generating NeuroRAG answers...'):
     for question in questions:
-      answer = get_neurorag_answer(question)
+      answer, _ = get_neurorag_answer(question)
       results['neurorag_answers'].append(answer)
 
   # Generate competitor answers
   for model_name in selected_models:
     with st.spinner(f'Generating {model_name} answers...'):
       for question in questions:
-        answer = get_competitor_answer(question, OPENROUTER_MODELS[model_name])
+        answer, _ = get_competitor_answer(question, OPENROUTER_MODELS[model_name])
         results['competitor_answers'][model_name].append(answer)
 
   # Calculate metrics for each model
@@ -411,18 +417,23 @@ if st.button(
 ):
   if question.strip() and selected_models:
     with st.spinner('Generating answers...'):
-      neurorag_answer = get_neurorag_answer(question)
+      neurorag_answer, neurorag_time = get_neurorag_answer(question)
 
       # Generate answers for all selected competitor models
       competitor_answers = {}
+      competitor_times = {}
       for model_name in selected_models:
-        competitor_answers[model_name] = get_competitor_answer(
+        answer, elapsed_time = get_competitor_answer(
           question, OPENROUTER_MODELS[model_name]
         )
+        competitor_answers[model_name] = answer
+        competitor_times[model_name] = elapsed_time
 
       st.session_state.current_question = question
       st.session_state.neurorag_answer = neurorag_answer
+      st.session_state.neurorag_time = neurorag_time
       st.session_state.competitor_answers = competitor_answers
+      st.session_state.competitor_times = competitor_times
       st.session_state.selected_models = selected_models
 
 if hasattr(st.session_state, 'current_question') and st.session_state.current_question:
@@ -431,14 +442,18 @@ if hasattr(st.session_state, 'current_question') and st.session_state.current_qu
   cols = st.columns(1 + num_competitors)
 
   with cols[0]:
+    neurorag_time = st.session_state.get('neurorag_time', 0)
     st.subheader(f'🧠 {MASKED_NAMES["NeuroRAG"]}')
+    st.caption(f'⏱️ {neurorag_time:.1f}s')
     st.write(st.session_state.neurorag_answer)
 
   # Display competitor models in remaining columns
   for i, model_name in enumerate(st.session_state.selected_models):
     masked = MASKED_NAMES[model_name]
     with cols[i + 1]:
+      competitor_time = st.session_state.get('competitor_times', {}).get(model_name, 0)
       st.subheader(f'🤖 {masked}')
+      st.caption(f'⏱️ {competitor_time:.1f}s')
       st.markdown('**Answer:**')
       st.write(st.session_state.competitor_answers[model_name])
 
