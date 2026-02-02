@@ -1,33 +1,33 @@
-import os
-import operator
 import asyncio
-import chromadb
+import operator
+import os
 from datetime import datetime
 from typing import Annotated, Literal
-from typing_extensions import TypedDict
-from dotenv import load_dotenv
 
-from langchain_core.documents import Document
+import chromadb
+from dotenv import load_dotenv
 from langchain_chroma import Chroma
-from langgraph.graph import START, END, StateGraph
 from langchain_community.retrievers import (
-  PubMedRetriever,
   ArxivRetriever,
   BM25Retriever,
+  PubMedRetriever,
 )
 from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_core.documents import Document
+from langgraph.graph import END, START, StateGraph
+from typing_extensions import TypedDict
 
-from neurorag.chains.route import RouteChain
-from neurorag.chains.document_grade import DocumentGradeChain
-from neurorag.chains.hallucinations import HallucinationsChain
 from neurorag.chains.answer_grade import AnswerGradeChain
-from neurorag.chains.hyde import HyDEChain
-from neurorag.chains.step_back import StepBackChain
-from neurorag.chains.decomposition import DecompositionChain
-from neurorag.chains.ncbi_protein import NCBIProteinChain
-from neurorag.chains.ncbi_gene import NCBIGeneChain
 from neurorag.chains.biorxiv import BioRxivChain, MedRxivChain
+from neurorag.chains.decomposition import DecompositionChain
+from neurorag.chains.document_grade import DocumentGradeChain
 from neurorag.chains.generation import GenerationChain
+from neurorag.chains.hallucinations import HallucinationsChain
+from neurorag.chains.hyde import HyDEChain
+from neurorag.chains.ncbi_gene import NCBIGeneChain
+from neurorag.chains.ncbi_protein import NCBIProteinChain
+from neurorag.chains.route import RouteChain
+from neurorag.chains.step_back import StepBackChain
 from neurorag.models.OpenRouter import OpenRouter
 from neurorag.models.OpenRouterEmbeddings import OpenRouterEmbeddings
 
@@ -62,7 +62,7 @@ class GraphStateSchema(TypedDict):
 class NeuroRAG:
   def __init__(
     self,
-    model='meta-llama/llama-3.3-70b-instruct',
+    model='meta-llama/llama-3.1-8b-instruct',
     embeddings_model='openai/text-embedding-3-small',
     temperature: float = 0,
     debug: bool = False,
@@ -111,7 +111,7 @@ class NeuroRAG:
     self.medrxiv_chain = MedRxivChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=self.max_retries * 3)
-    self.generation_chain = GenerationChain(self.llm, self.temperature, llms=self.llms)
+    self.generation_chain = GenerationChain(self.temperature, llms=self.llms)
     self.hallucinations_chain = HallucinationsChain(self.llm)
     self.answer_grade_chain = AnswerGradeChain(self.llm)
 

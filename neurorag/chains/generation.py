@@ -1,19 +1,13 @@
-import os
 from operator import itemgetter
-from typing import TypedDict, Optional
+from typing import TypedDict
 
+from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnableLambda
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableSerializable
+from langchain_core.runnables import RunnableLambda, RunnableSerializable
 
 from neurorag.chains.fusing import FusingChain, FusingSchema
 from neurorag.chains.json_extractor import JsonExtractor
-from langchain_core.output_parsers import PydanticOutputParser
 from neurorag.models.OpenRouter import OpenRouter
-
-
-ollama_server_url = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 
 
 class FuseData(TypedDict):
@@ -51,7 +45,7 @@ parser = PydanticOutputParser(pydantic_object=FusingSchema)
 
 
 class GenerationChain:
-  def __init__(self, llm, temperature: float = 0, llms: Optional[dict] = None) -> None:
+  def __init__(self, temperature: float = 0, llms: dict | None = None) -> None:
     self.fusing_chain = FusingChain()
     self.temperature = temperature
     self.llms = llms or {
