@@ -39,6 +39,14 @@ CHROMA_TENANT = os.getenv('CHROMA_TENANT')
 CHROMA_DATABASE = os.getenv('CHROMA_DATABASE', 'neurorag')
 CHROMA_COLLECTION_NAME = os.getenv('CHROMA_COLLECTION_NAME', 'documents')
 
+# Timeouts and concurrency
+HYDE_NODE_TIMEOUT = 300  # seconds for all HyDE calls
+GRADE_DOCUMENTS_TIMEOUT = 180
+RETRIEVER_NODE_TIMEOUT = 120
+OPENROUTER_REQUEST_TIMEOUT = 90
+OPENROUTER_MAX_RETRIES = 3
+MAX_CONCURRENT_LLM_CALLS = 1  # 1 = sequential; avoids OpenRouter 429 and retry deadlock
+
 
 class GraphStateSchema(TypedDict):
   query: str
@@ -75,7 +83,12 @@ class NeuroRAG:
     self.generation_prompt = generation_prompt
     self.max_retries = max_retries
     self.llms = llms
-    self.llm = OpenRouter(model=model, temperature=self.temperature)
+    self.llm = OpenRouter(
+      model=model,
+      temperature=self.temperature,
+      request_timeout=OPENROUTER_REQUEST_TIMEOUT,
+      max_retries=OPENROUTER_MAX_RETRIES,
+    )
     self.embeddings_model = embeddings_model
 
   def _debug_print(self, *args, **kwargs):
@@ -256,10 +269,32 @@ class NeuroRAG:
     queries = [query, step_back_query, *subqueries]
 
     async def generate_all_hyde_documents():
-      tasks = [self.hyde_chain.ainvoke(q) for q in queries]
-      return await asyncio.gather(*tasks)
+      sem = asyncio.Semaphore(MAX_CONCURRENT_LLM_CALLS)
 
-    generated_documents = asyncio.run(generate_all_hyde_documents())
+      async def one(q):
+        async with sem:
+          return await self.hyde_chain.ainvoke(q)
+
+      return await asyncio.gather(
+        *[one(q) for q in queries],
+        return_exceptions=False,
+      )
+
+    try:
+      generated_documents = asyncio.run(
+        asyncio.wait_for(
+          generate_all_hyde_documents(),
+          timeout=HYDE_NODE_TIMEOUT,
+        )
+      )
+    except asyncio.TimeoutError:
+      self._debug_print(
+        'generate_hyde_documents_node timed out after', HYDE_NODE_TIMEOUT, 's'
+      )
+      raise RuntimeError(
+        f'HyDE generation timed out after {HYDE_NODE_TIMEOUT}s. '
+        'Try fewer subqueries or increase HYDE_NODE_TIMEOUT.'
+      ) from None
 
     return {'generated_documents': generated_documents}
 
@@ -276,7 +311,13 @@ class NeuroRAG:
       tasks = [self.vector_store_retriever.ainvoke(doc) for doc in generated_documents]
       return await asyncio.gather(*tasks)
 
-    results = asyncio.run(retrieve_all())
+    try:
+      results = asyncio.run(
+        asyncio.wait_for(retrieve_all(), timeout=RETRIEVER_NODE_TIMEOUT)
+      )
+    except asyncio.TimeoutError:
+      self._debug_print('vector_store_retriever_node timed out')
+      results = []
     documents = [doc for result in results for doc in result]
 
     return {'documents': documents}
@@ -305,7 +346,13 @@ class NeuroRAG:
       tasks = [safe_retrieve(q) for q in queries]
       return await asyncio.gather(*tasks)
 
-    results = asyncio.run(retrieve_all())
+    try:
+      results = asyncio.run(
+        asyncio.wait_for(retrieve_all(), timeout=RETRIEVER_NODE_TIMEOUT)
+      )
+    except asyncio.TimeoutError:
+      self._debug_print('pub_med_retriever_node timed out')
+      results = []
     documents = [doc for result in results for doc in result]
 
     for document in documents:
@@ -337,7 +384,13 @@ class NeuroRAG:
       tasks = [safe_retrieve(q) for q in queries]
       return await asyncio.gather(*tasks)
 
-    results = asyncio.run(retrieve_all())
+    try:
+      results = asyncio.run(
+        asyncio.wait_for(retrieve_all(), timeout=RETRIEVER_NODE_TIMEOUT)
+      )
+    except asyncio.TimeoutError:
+      self._debug_print('arxiv_retriever_node timed out')
+      results = []
     documents = [doc for result in results for doc in result]
 
     for document in documents:
@@ -406,7 +459,13 @@ class NeuroRAG:
       tasks = [safe_retrieve(q) for q in queries]
       return await asyncio.gather(*tasks)
 
-    results = asyncio.run(retrieve_all())
+    try:
+      results = asyncio.run(
+        asyncio.wait_for(retrieve_all(), timeout=RETRIEVER_NODE_TIMEOUT)
+      )
+    except asyncio.TimeoutError:
+      self._debug_print('biorxiv_retriever_node timed out')
+      results = []
     documents = [doc for result in results for doc in result]
 
     return {'documents': documents}
@@ -436,7 +495,13 @@ class NeuroRAG:
       tasks = [safe_retrieve(q) for q in queries]
       return await asyncio.gather(*tasks)
 
-    results = asyncio.run(retrieve_all())
+    try:
+      results = asyncio.run(
+        asyncio.wait_for(retrieve_all(), timeout=RETRIEVER_NODE_TIMEOUT)
+      )
+    except asyncio.TimeoutError:
+      self._debug_print('medrxiv_retriever_node timed out')
+      results = []
     documents = [doc for result in results for doc in result]
 
     return {'documents': documents}
@@ -463,20 +528,36 @@ class NeuroRAG:
       f'---BM25 TOP CANDIDATES: {len(retrieved_documents)} documents---'
     )
 
-    # Grade documents in parallel
+    # Grade documents with limited concurrency and timeout
     async def grade_all_documents():
+      sem = asyncio.Semaphore(MAX_CONCURRENT_LLM_CALLS)
+
       async def grade_single(doc):
-        try:
-          grade = await self.document_grade_chain.ainvoke(query, doc)
-          return (doc, grade.lower() == 'yes')
-        except Exception as e:
-          self._debug_print('grade_documents_node', e)
-          return (doc, False)
+        async with sem:
+          try:
+            grade = await self.document_grade_chain.ainvoke(query, doc)
+            return (doc, grade.lower() == 'yes')
+          except Exception as e:
+            self._debug_print('grade_documents_node', e)
+            return (doc, False)
 
       tasks = [grade_single(doc) for doc in retrieved_documents]
       return await asyncio.gather(*tasks)
 
-    grading_results = asyncio.run(grade_all_documents())
+    try:
+      grading_results = asyncio.run(
+        asyncio.wait_for(
+          grade_all_documents(),
+          timeout=GRADE_DOCUMENTS_TIMEOUT,
+        )
+      )
+    except asyncio.TimeoutError:
+      self._debug_print(
+        'grade_documents_node timed out after', GRADE_DOCUMENTS_TIMEOUT, 's'
+      )
+      raise RuntimeError(
+        f'Document grading timed out after {GRADE_DOCUMENTS_TIMEOUT}s.'
+      ) from None
     filtered_documents = [doc for doc, is_relevant in grading_results if is_relevant]
     filtered_documents = filtered_documents[:3]
 
