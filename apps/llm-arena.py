@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 import time
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -9,24 +9,24 @@ sys.path.append('../neurorag')
 sys.path.append('../neurorag/chains')
 sys.path.append(project_root)
 
-import streamlit as st
-import warnings
 import json
+import sys
+import warnings
+from typing import Any, Optional
+
 import pandas as pd
+import streamlit as st
 from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
-from typing import Any, Optional
-import sys
 
-from notebooks.metrics import (
-  embeddings_cosine_sim_metric,
-  bleu_metric,
-  rogue_l_metric,
-  rogue_1_metric,
-)
-
-from neurorag.neurorag import NeuroRAG
 from neurorag.models.OpenRouter import OpenRouter
+from neurorag.neurorag import NeuroRAG
+from notebooks.metrics import (
+  bleu_metric,
+  embeddings_cosine_sim_metric,
+  rogue_1_metric,
+  rogue_l_metric,
+)
 
 warnings.filterwarnings('ignore')
 load_dotenv()
@@ -283,8 +283,6 @@ Compare NeuroRAG's performance against other AI models. Ask a question and see h
 """)
 
 with st.sidebar:
-  st.header('⚙️ Settings')
-
   st.subheader('🤖 Competitor Models')
   st.markdown('Select up to 3 models to compare with NeuroRAG:')
 
