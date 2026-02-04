@@ -45,7 +45,7 @@ GRADE_DOCUMENTS_TIMEOUT = 180
 RETRIEVER_NODE_TIMEOUT = 120
 OPENROUTER_REQUEST_TIMEOUT = 90
 OPENROUTER_MAX_RETRIES = 3
-MAX_CONCURRENT_LLM_CALLS = 1  # 1 = sequential; avoids OpenRouter 429 and retry deadlock
+MAX_CONCURRENT_LLM_CALLS = 3  # 1 = sequential; avoids OpenRouter 429 and retry deadlock
 
 
 class GraphStateSchema(TypedDict):
