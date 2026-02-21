@@ -4,6 +4,10 @@ import os
 from datetime import datetime
 from typing import Annotated, Literal
 
+import nest_asyncio
+
+nest_asyncio.apply()
+
 import chromadb
 from dotenv import load_dotenv
 from langchain_chroma import Chroma

@@ -17,6 +17,7 @@ openai>=1.0.0
 summac==0.0.4
 bert-score==0.3.13
 rank-bm25==0.2.2
+nest-asyncio>=1.6.0
 torch>=2.1.0,<3.0.0
 torchvision>=0.16.0,<1.0.0
 transformers>=4.30.0,<5.0.0
