@@ -1,0 +1,26 @@
+question,answer,category
+How does the distribution of Braak stages change across increasing ADNC categories?,"In this dataset, higher ADNC scores are observed to be associated with higher Braak stages.",knowledge
+How does the frequency of the APOE4 allele relate with increasing ADNC scores?,"In this dataset, APOE4 allele is observed to be more frequent in donors with high ADNC compared to those with lower or no ADNC.",knowledge
+How does the median age at death vary across high and low ADNC categories in the SEA-AD cohort?,"In this dataset, individuals with high ADNC scores are observed to have a higher median age at death compared to those with low ADNC.",knowledge
+What is the relationship between Thal phases and higher ADNC scores in the SEA-AD cohort?,"In this dataset, donors with higher ADNC scores are observed to exhibit later Thal phases.",knowledge
+How do CERAD scores vary with different ADNC categories in the SEA-AD dataset?,"In this dataset, as ADNC scores increase, CERAD scores are observed to also rise.",knowledge
+How does the prevalence of clinically diagnosed dementia differ among donors with varying ADNC scores?,"In this dataset, donors with high ADNC scores are observed to be diagnosed with dementia prior to death in higher proportion relative to donors assigned other ADNC scores.",knowledge
+How does the presence and frequency of comorbid neuropathologies relate with ADNC scores?,"In this dataset, higher ADNC scores are observed to show a higher incidence of comorbid neuropathologies.",knowledge
+Which subclass of glutamatergic neurons is most frequent in the RHP region?,"In the RHP region, the subclass 019 L2/3 IT PPP Glut is the most prevalent with 2,394 occurrences.",data-analysis
+What are the number of unique supertypes for the filtered class '19 MB Glut'?,"In the observed data, class '19 MB Glut' includes 116 unique supertypes.",data-analysis
+What are the number of unique supertypes for the filtered class '24 MY Glut'?,"In the observed data, '24 MY Glut' includes 76 unique supertypes.",data-analysis
+What are the distribution (with cell numbers) of donor genotypes for the 'Glut' neurotransmitter class?,"In the observed data, 'Glut' neurotransmitter class shows the following genotype distribution: 194,986 cells with Snap25-IRES2-Cre/wt;Ai14(RCL-tdT)/wt, 8,229 cells with Ai14(RCL-tdT)/wt, 1,861 cells with Slc32a1-IRES-Cre/wt;Ai14(RCL-tdT)/wt, 223 cells with Gad2-IRES-Cre/wt;Ai14(RCL-tdT)/wt, and 65 cells with wt/wt.",data-analysis
+Which subclass of glutamatergic neurons is most frequent in the RHP region?,"In the RHP region, the subclass 019 L2/3 IT PPP Glut is the most prevalent with 2,394 occurrences.",data-analysis
+What are the number of unique supertypes for the filtered class '19 MB Glut'?,"In the observed data, class '19 MB Glut' includes 116 unique supertypes.",data-analysis
+What are the number of unique supertypes for the filtered class '24 MY Glut'?,"In the observed data, '24 MY Glut' includes 76 unique supertypes.",data-analysis
+What are the distribution (with cell numbers) of donor genotypes for the 'Glut' neurotransmitter class?,"In the observed data, 'Glut' neurotransmitter class shows the following genotype distribution: 194,986 cells with Snap25-IRES2-Cre/wt;Ai14(RCL-tdT)/wt, 8,229 cells with Ai14(RCL-tdT)/wt, 1,861 cells with Slc32a1-IRES-Cre/wt;Ai14(RCL-tdT)/wt, 223 cells with Gad2-IRES-Cre/wt;Ai14(RCL-tdT)/wt, and 65 cells with wt/wt.",data-analysis
+How many clusters contain no dark-phase transcriptomes in this dataset?,62 neuronal clusters exhibit dual glutamate-GABA co-transmission.,data-analysis
+How many neuronal clusters exhibit dual glutamate-GABA co-transmission in this dataset?,335 clusters contain no dark-phase transcriptomes.,data-analysis
+What percentage of all the clusters express at least one neuropeptide gene?,79 % of all clusters express at least one neuropeptide gene.,data-analysis
+"Of the dopaminergic clusters, what proportion also co-release another fast transmitter (GABA or Glutamate)?",35 of the dopaminergic clusters co-release another fast transmitter.,data-analysis
+"Of the 48 cholinergic clusters, how many co-release glutamate?",24 of the 48 cholinergic clusters co-release glutamate.,data-analysis
+"Of the 48 cholinergic clusters, how many co-release GABA?",7 of the 48 cholinergic clusters co-release GABA.,data-analysis
+"Of the 48 cholinergic clusters, how many co-release glutamate + GABA?",3 of the 48 cholinergic clusters co-release both glutamate and GABA.,data-analysis
+"Of the 48 cholinergic clusters, how many co-release dopamine?",1 of the 48 cholinergic clusters co-releases dopamine.,data-analysis
+How many clusters show significant sex-biased representation and across how many subclasses?,26 clusters show significant sex-biased representation.,data-analysis
+How many clusters are completely sex-specific across males and females?,5 clusters are completely sex-specific.,data-analysis
