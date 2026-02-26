@@ -1,8 +1,7 @@
-from pydantic import BaseModel, Field
-
 from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, Field
 
 from neurorag.chains.json_extractor import JsonExtractor
 
@@ -19,7 +18,8 @@ You are an expert editor and synthesizer. Merge multiple AI-generated responses 
 - Prefer **specific, verifiable facts** and **shared consensus** across responses.
 - If responses disagree, **resolve** it by choosing the most defensible claim and briefly note the uncertainty (do not hand-wave).
 - Remove filler, repetition, generic advice, and non-answers.
-- Keep the final answer **thorough but not verbose**.
+- Keep the final answer **thorough and detailed** — preserve ALL unique facts and details from every response. Aim for at least three substantial paragraphs.
+- Do NOT shorten or summarize excessively. The fused answer should be at least as long as the longest individual response.
 - The final answer MUST be **Markdown** (headings + bullet points) and easy to scan.
 
 ### Input
