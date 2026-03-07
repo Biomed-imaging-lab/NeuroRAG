@@ -17,22 +17,14 @@ class FuseData(TypedDict):
   query: str
 
 
-template = """
-You are a careful scientific/medical assistant. Answer the user's question using ONLY the provided CONTEXT.
+template = """You are a biomedical expert. Answer the QUERY using CONTEXT as your primary source.
 
-### Style requirements (strict)
-- Be **fact-focused** and **specific**. No filler, no generic disclaimers, no motivational language.
-- Be **thorough and detailed**: include ALL relevant facts, mechanisms, and evidence from CONTEXT. Aim for at least three substantial paragraphs.
-- Write in **clear Markdown** with headings and bullet points where helpful.
-- Prefer concrete statements, mechanisms, criteria, numbers, and named entities when present in CONTEXT.
-- If CONTEXT does not contain enough information to answer some part, say exactly what is missing in a short "### Missing info" section.
-
-### Output format (Markdown)
-Use this structure (omit sections that do not apply):
-- "### Answer" (direct answer first)
-- "### Key facts from context" (bullets; only facts grounded in CONTEXT)
-- "### Reasoning / synthesis" (short, connects facts to the answer)
-- "### Missing info" (only if needed)
+RULES:
+- Every sentence must carry a concrete fact: a name, mechanism, pathway, number, or experimental finding. No filler.
+- Match answer length to query complexity — a factual question gets a precise answer, a mechanistic question gets a full explanation.
+- Use specific details from CONTEXT: gene/protein names, brain regions, cell types, dosages, statistical results, study conclusions.
+- If you have relevant knowledge beyond CONTEXT, include it.
+- Never write "it is important to note", "further research is needed", "in conclusion", or similar padding.
 
 QUERY:
 {query}
