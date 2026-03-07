@@ -75,7 +75,7 @@ class GraphStateSchema(TypedDict):
 class NeuroRAG:
   def __init__(
     self,
-    model='meta-llama/llama-3.1-8b-instruct',
+    model='openai/gpt-oss-20b:nitro',
     embeddings_model='openai/text-embedding-3-small',
     temperature: float = 0,
     debug: bool = False,
