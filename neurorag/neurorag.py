@@ -38,6 +38,8 @@ from neurorag.models.OpenRouterEmbeddings import OpenRouterEmbeddings
 
 load_dotenv()
 
+os.environ.setdefault('ANONYMIZED_TELEMETRY', 'False')
+
 # Chroma cloud configuration
 CHROMA_API_KEY = os.getenv('CHROMA_API_KEY')
 CHROMA_TENANT = os.getenv('CHROMA_TENANT')
