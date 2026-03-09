@@ -10,7 +10,7 @@ class FusingSchema(BaseModel):
   final_response: str = Field(description='The final fused response.')
 
 
-template = """Merge multiple expert answers into ONE response that is maximally useful to the user.
+template = """Merge multiple expert answers into ONE response that is maximally useful to the user. Format the answer in structured Markdown.
 
 RULES:
 1. Keep every unique fact, mechanism, name, number, and finding from ALL responses — nothing useful should be lost.
@@ -18,6 +18,7 @@ RULES:
 3. Remove only exact duplicates and generic filler ("it is worth noting", "in summary", etc.).
 4. Match length to query complexity: a simple factual query deserves a concise merged answer; a complex mechanistic query deserves a thorough one. Never pad with generalities.
 5. DO NOT add meta-commentary like "Here is the merged answer" or "In conclusion".
+6. Use Markdown formatting — headings, subheadings, bold, bullet/numbered lists — wherever it improves readability.
 
 Original query:
 {query}
