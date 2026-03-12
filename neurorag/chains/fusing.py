@@ -1,9 +1,9 @@
 from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from neurorag.chains.json_extractor import JsonExtractor
+from neurorag.models.OpenRouter import OpenRouter
 
 
 class FusingSchema(BaseModel):
@@ -42,7 +42,7 @@ prompt = PromptTemplate(
 
 class FusingChain:
   def __init__(self):
-    llm = ChatOpenAI(model='gpt-4.1', temperature=0)
+    llm = OpenRouter(model='openai/gpt-4.1', temperature=0)
     self.chain = (
       prompt | llm | StrOutputParser() | JsonExtractor() | parser
     ).with_retry(stop_after_attempt=2)

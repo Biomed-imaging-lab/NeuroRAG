@@ -62,6 +62,7 @@ class GenerationChain:
       )
       return fused_response
     except Exception:
+      print(f'Fusing chain failed, using {responses[0]}')
       try:
         return (
           (StrOutputParser() | JsonExtractor() | parser)
@@ -69,6 +70,7 @@ class GenerationChain:
           .correct_answer
         )
       except Exception:
+        print(f'Json extractor failed, using {responses[0]}')
         return responses[0]
 
   def invoke(self, query: str, context: str, user_prompt=None) -> str:

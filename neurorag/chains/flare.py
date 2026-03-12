@@ -8,7 +8,6 @@ regenerated with enriched context.
 Reference: Jiang et al., "Active Retrieval Augmented Generation" (2023).
 """
 
-import asyncio
 from typing import Callable
 
 from langchain_core.documents import Document
@@ -16,7 +15,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 
 from neurorag.chains.json_extractor import JsonExtractor
-
 
 # ── Prompts ──────────────────────────────────────────────────────────────────
 
@@ -105,15 +103,11 @@ class FlareChain:
     self.max_sentences = max_sentences
     self.max_retrievals = max_retrievals
 
-    self.generate_chain = (
-      GENERATE_NEXT_PROMPT | llm | StrOutputParser()
-    )
+    self.generate_chain = GENERATE_NEXT_PROMPT | llm | StrOutputParser()
     self.identify_chain = (
       IDENTIFY_UNCERTAIN_PROMPT | llm | StrOutputParser() | JsonExtractor()
     )
-    self.regenerate_chain = (
-      REGENERATE_PROMPT | llm | StrOutputParser()
-    )
+    self.regenerate_chain = REGENERATE_PROMPT | llm | StrOutputParser()
 
   def _retrieve(self, queries: list[str]) -> str:
     """Retrieve documents for multiple queries and combine."""
@@ -144,11 +138,13 @@ class FlareChain:
     total_retrievals = 0
 
     for _ in range(self.max_sentences):
-      next_sentence = self.generate_chain.invoke({
-        'query': query,
-        'context': context,
-        'partial_answer': partial_answer or '(empty — start the answer)',
-      }).strip()
+      next_sentence = self.generate_chain.invoke(
+        {
+          'query': query,
+          'context': context,
+          'partial_answer': partial_answer or '(empty — start the answer)',
+        }
+      ).strip()
 
       if '[DONE]' in next_sentence or not next_sentence:
         break
@@ -161,21 +157,25 @@ class FlareChain:
 
       if total_retrievals < self.max_retrievals:
         try:
-          uncertain_queries = self.identify_chain.invoke({
-            'query': query,
-            'context': context,
-            'sentence': next_sentence,
-          })
+          uncertain_queries = self.identify_chain.invoke(
+            {
+              'query': query,
+              'context': context,
+              'sentence': next_sentence,
+            }
+          )
 
           if isinstance(uncertain_queries, list) and len(uncertain_queries) > 0:
             evidence = self._retrieve(uncertain_queries)
             if evidence:
-              next_sentence = self.regenerate_chain.invoke({
-                'query': query,
-                'context': context,
-                'evidence': evidence,
-                'sentence': next_sentence,
-              }).strip()
+              next_sentence = self.regenerate_chain.invoke(
+                {
+                  'query': query,
+                  'context': context,
+                  'evidence': evidence,
+                  'sentence': next_sentence,
+                }
+              ).strip()
               # Enrich the context for subsequent sentences
               context = context + '\n\n' + evidence
               total_retrievals += 1
@@ -199,11 +199,13 @@ class FlareChain:
 
     for _ in range(self.max_sentences):
       next_sentence = (
-        await generate_chain_async.ainvoke({
-          'query': query,
-          'context': context,
-          'partial_answer': partial_answer or '(empty — start the answer)',
-        })
+        await generate_chain_async.ainvoke(
+          {
+            'query': query,
+            'context': context,
+            'partial_answer': partial_answer or '(empty — start the answer)',
+          }
+        )
       ).strip()
 
       if '[DONE]' in next_sentence or not next_sentence:
@@ -216,22 +218,26 @@ class FlareChain:
 
       if total_retrievals < self.max_retrievals:
         try:
-          uncertain_queries = await identify_chain_async.ainvoke({
-            'query': query,
-            'context': context,
-            'sentence': next_sentence,
-          })
+          uncertain_queries = await identify_chain_async.ainvoke(
+            {
+              'query': query,
+              'context': context,
+              'sentence': next_sentence,
+            }
+          )
 
           if isinstance(uncertain_queries, list) and len(uncertain_queries) > 0:
             evidence = self._retrieve(uncertain_queries)
             if evidence:
               next_sentence = (
-                await regenerate_chain_async.ainvoke({
-                  'query': query,
-                  'context': context,
-                  'evidence': evidence,
-                  'sentence': next_sentence,
-                })
+                await regenerate_chain_async.ainvoke(
+                  {
+                    'query': query,
+                    'context': context,
+                    'evidence': evidence,
+                    'sentence': next_sentence,
+                  }
+                )
               ).strip()
               context = context + '\n\n' + evidence
               total_retrievals += 1
