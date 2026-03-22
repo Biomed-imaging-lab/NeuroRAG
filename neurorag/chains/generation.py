@@ -37,8 +37,8 @@ parser = PydanticOutputParser(pydantic_object=FusingSchema)
 
 
 class GenerationChain:
-  def __init__(self, temperature: float = 0, llms: dict | None = None) -> None:
-    self.fusing_chain = FusingChain()
+  def __init__(self, temperature: float = 0, llms: dict | None = None, is_for_arena: bool = False) -> None:
+    self.fusing_chain = FusingChain(is_for_arena=is_for_arena)
     self.temperature = temperature
     self.llms = llms or {
       'openai': OpenRouter(model='openai/gpt-4.1', temperature=temperature),

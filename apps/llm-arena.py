@@ -62,7 +62,7 @@ def get_openrouter_llm(model_name: str) -> Optional[Any]:
 def get_neurorag_answer(question: str) -> tuple[str, float]:
   """Get answer from NeuroRAG with timing"""
   start_time = time.time()
-  neurorag = NeuroRAG(temperature=0, debug=True)
+  neurorag = NeuroRAG(temperature=0, debug=True, is_for_arena=True)
   neurorag.compile()
   result = neurorag.invoke(question)
   elapsed_time = time.time() - start_time
@@ -452,7 +452,6 @@ if hasattr(st.session_state, 'current_question') and st.session_state.current_qu
       competitor_time = st.session_state.get('competitor_times', {}).get(model_name, 0)
       st.subheader(f'🤖 {masked}')
       st.caption(f'⏱️ {competitor_time:.1f}s')
-      st.markdown('**Answer:**')
       st.write(st.session_state.competitor_answers[model_name])
 
   st.markdown('---')

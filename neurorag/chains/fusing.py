@@ -10,7 +10,7 @@ class FusingSchema(BaseModel):
   final_response: str = Field(description='The final fused response.')
 
 
-template = """
+BASE_TEMPLATE = """
 ### Task
 You are an expert editor and synthesizer. Merge multiple AI-generated responses into ONE best answer.
 
@@ -18,7 +18,7 @@ You are an expert editor and synthesizer. Merge multiple AI-generated responses 
 - Prefer **specific, verifiable facts** and **shared consensus** across responses.
 - If responses disagree, **resolve** it by choosing the most defensible claim and briefly note the uncertainty (do not hand-wave).
 - Keep the final answer **thorough and detailed** — preserve ALL unique facts and details from every response. Aim for at least three substantial paragraphs.
-
+{arena_rule}
 ### Input
 Original query:
 {query}
@@ -33,17 +33,21 @@ IMPORTANT: Put the Markdown answer inside the `final_response` field exactly.
 {format_instructions}
 """
 
-parser = PydanticOutputParser(pydantic_object=FusingSchema)
+_ARENA_RULE = '- The final answer MUST be **Markdown** (headings + bullet points) and easy to scan.\n'
 
-prompt = PromptTemplate(
-  template=template,
-  input_variables=['query', 'responses'],
-  partial_variables={'format_instructions': parser.get_format_instructions()},
-)
+parser = PydanticOutputParser(pydantic_object=FusingSchema)
 
 
 class FusingChain:
-  def __init__(self):
+  def __init__(self, is_for_arena: bool = False):
+    template = BASE_TEMPLATE.replace(
+      '{arena_rule}', _ARENA_RULE if is_for_arena else ''
+    )
+    prompt = PromptTemplate(
+      template=template,
+      input_variables=['query', 'responses'],
+      partial_variables={'format_instructions': parser.get_format_instructions()},
+    )
     llm = OpenRouter(model='openai/gpt-4.1', temperature=0)
     self.chain = (
       prompt | llm | StrOutputParser() | JsonExtractor() | parser

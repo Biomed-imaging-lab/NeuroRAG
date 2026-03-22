@@ -85,6 +85,7 @@ class NeuroRAG:
     max_retries: int = 1,
     llms=None,
     use_flare: bool = False,
+    is_for_arena: bool = False,
   ) -> None:
     self.temperature = temperature
     self.debug = debug
@@ -92,6 +93,7 @@ class NeuroRAG:
     self.max_retries = max_retries
     self.llms = llms
     self.use_flare = use_flare
+    self.is_for_arena = is_for_arena
     self.llm = OpenRouter(
       model=model,
       temperature=self.temperature,
@@ -133,7 +135,9 @@ class NeuroRAG:
     self.medrxiv_chain = MedRxivChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=self.max_retries * 3)
-    self.generation_chain = GenerationChain(self.temperature, llms=self.llms)
+    self.generation_chain = GenerationChain(
+      self.temperature, llms=self.llms, is_for_arena=self.is_for_arena
+    )
     self.hallucinations_chain = HallucinationsChain(self.llm)
     self.answer_grade_chain = AnswerGradeChain(self.llm)
 
