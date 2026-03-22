@@ -10,23 +10,25 @@ class FusingSchema(BaseModel):
   final_response: str = Field(description='The final fused response.')
 
 
-template = """Merge multiple expert answers into ONE response that is maximally useful to the user. Format the answer in structured Markdown.
+template = """
+### Task
+You are an expert editor and synthesizer. Merge multiple AI-generated responses into ONE best answer.
 
-RULES:
-1. Keep every unique fact, mechanism, name, number, and finding from ALL responses — nothing useful should be lost.
-2. If responses disagree, include the most specific/evidence-backed version and note the discrepancy briefly.
-3. Remove only exact duplicates and generic filler ("it is worth noting", "in summary", etc.).
-4. Match length to query complexity: a simple factual query deserves a concise merged answer; a complex mechanistic query deserves a thorough one. Never pad with generalities.
-5. DO NOT add meta-commentary like "Here is the merged answer" or "In conclusion".
-6. Use Markdown formatting — headings, subheadings, bold, bullet/numbered lists — wherever it improves readability.
+### Rules (strict)
+- Prefer **specific, verifiable facts** and **shared consensus** across responses.
+- If responses disagree, **resolve** it by choosing the most defensible claim and briefly note the uncertainty (do not hand-wave).
+- Keep the final answer **thorough and detailed** — preserve ALL unique facts and details from every response. Aim for at least three substantial paragraphs.
 
+### Input
 Original query:
 {query}
 
-Responses to merge:
+Individual responses:
 {responses}
 
-Return STRICTLY valid JSON. Put the full merged answer in the `final_response` field.
+### Output
+Return STRICTLY valid JSON following these format instructions.
+IMPORTANT: Put the Markdown answer inside the `final_response` field exactly.
 
 {format_instructions}
 """
