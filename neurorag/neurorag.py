@@ -25,7 +25,6 @@ from neurorag.chains.answer_grade import AnswerGradeChain
 from neurorag.chains.biorxiv import BioRxivChain, MedRxivChain
 from neurorag.chains.decomposition import DecompositionChain
 from neurorag.chains.document_grade import DocumentGradeChain
-from neurorag.chains.flare import FlareChain
 from neurorag.chains.generation import GenerationChain
 from neurorag.chains.hallucinations import HallucinationsChain
 from neurorag.chains.hyde import HyDEChain
@@ -84,7 +83,6 @@ class NeuroRAG:
     generation_prompt=None,
     max_retries: int = 1,
     llms=None,
-    use_flare: bool = False,
     is_for_arena: bool = False,
   ) -> None:
     self.temperature = temperature
@@ -92,7 +90,6 @@ class NeuroRAG:
     self.generation_prompt = generation_prompt
     self.max_retries = max_retries
     self.llms = llms
-    self.use_flare = use_flare
     self.is_for_arena = is_for_arena
     self.llm = OpenRouter(
       model=model,
@@ -140,12 +137,6 @@ class NeuroRAG:
     )
     self.hallucinations_chain = HallucinationsChain(self.llm)
     self.answer_grade_chain = AnswerGradeChain(self.llm)
-
-    if self.use_flare:
-      self.flare_chain = FlareChain(
-        llm=self.llm,
-        retriever_fn=self._flare_retrieve,
-      )
 
     workflow = StateGraph(GraphStateSchema)
 
@@ -624,19 +615,6 @@ class NeuroRAG:
 
     return {'documents': new_documents, 'web_results': web_results}
 
-  def _flare_retrieve(self, query: str) -> list[Document]:
-    """Lightweight retriever used by FLARE for on-the-fly retrieval."""
-    docs: list[Document] = []
-    try:
-      docs.extend(self.vector_store_retriever.invoke(query)[:3])
-    except Exception:
-      pass
-    try:
-      docs.extend(self.pub_med_retriever.invoke(query)[:2])
-    except Exception:
-      pass
-    return docs
-
   def generate_node(self, state: GraphStateSchema):
     query = state['query']
     documents = state['documents']
@@ -645,12 +623,7 @@ class NeuroRAG:
     self._debug_print('---GENERATE---')
 
     context = '\n\n'.join(map(lambda doc: doc.page_content, documents))
-
-    if self.use_flare:
-      self._debug_print('---USING FLARE GENERATION---')
-      generation = self.flare_chain.invoke(query, context)
-    else:
-      generation = self.generation_chain.invoke(query, context, self.generation_prompt)
+    generation = self.generation_chain.invoke(query, context, self.generation_prompt)
 
     return {'generation': generation, 'generations_number': generations_number + 1}
 
