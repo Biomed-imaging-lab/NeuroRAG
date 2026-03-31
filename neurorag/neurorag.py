@@ -23,10 +23,12 @@ from typing_extensions import TypedDict
 
 from neurorag.chains.answer_grade import AnswerGradeChain
 from neurorag.chains.biorxiv import BioRxivChain, MedRxivChain
+from neurorag.chains.contextual_compression import ContextualCompressionChain
 from neurorag.chains.decomposition import DecompositionChain
 from neurorag.chains.document_grade import DocumentGradeChain
 from neurorag.chains.generation import GenerationChain
 from neurorag.chains.hallucinations import HallucinationsChain
+from neurorag.chains.rerank import RerankChain
 from neurorag.chains.hyde import HyDEChain
 from neurorag.chains.ncbi_gene import NCBIGeneChain
 from neurorag.chains.ncbi_protein import NCBIProteinChain
@@ -52,6 +54,32 @@ RETRIEVER_NODE_TIMEOUT = 120
 OPENROUTER_REQUEST_TIMEOUT = 90
 OPENROUTER_MAX_RETRIES = 3
 MAX_CONCURRENT_LLM_CALLS = 3  # 1 = sequential; avoids OpenRouter 429 and retry deadlock
+
+
+def _tag_documents(documents: list[Document], retriever_name: str) -> list[Document]:
+  """Add retriever source and rank metadata for RRF."""
+  for rank, doc in enumerate(documents):
+    doc.metadata['retriever_source'] = retriever_name
+    doc.metadata['retriever_rank'] = rank
+  return documents
+
+
+def reciprocal_rank_fusion(
+  documents: list[Document], k: int = 60
+) -> list[Document]:
+  """Merge documents from multiple retrievers using RRF scoring."""
+  scores: dict[str, float] = {}
+  doc_map: dict[str, Document] = {}
+
+  for doc in documents:
+    key = doc.page_content
+    rank = doc.metadata.get('retriever_rank', 0)
+    scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank + 1)
+    if key not in doc_map:
+      doc_map[key] = doc
+
+  sorted_keys = sorted(scores, key=scores.get, reverse=True)
+  return [doc_map[key] for key in sorted_keys]
 
 
 class GraphStateSchema(TypedDict):
@@ -131,6 +159,8 @@ class NeuroRAG:
     self.biorxiv_chain = BioRxivChain(self.llm)
     self.medrxiv_chain = MedRxivChain(self.llm)
     self.document_grade_chain = DocumentGradeChain(self.llm)
+    self.rerank_chain = RerankChain(self.llm)
+    self.compression_chain = ContextualCompressionChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=self.max_retries * 3)
     self.generation_chain = GenerationChain(
       self.temperature, llms=self.llms, is_for_arena=self.is_for_arena
@@ -330,7 +360,7 @@ class NeuroRAG:
       results = []
     documents = [doc for result in results for doc in result]
 
-    return {'documents': documents}
+    return {'documents': _tag_documents(documents, 'vectorstore')}
 
   def pub_med_retriever_node(self, state: GraphStateSchema):
     specialized_sources = state['specialized_sources']
@@ -368,7 +398,7 @@ class NeuroRAG:
     for document in documents:
       document.metadata['source'] = document.metadata.get('Title', 'PubMed')
 
-    return {'documents': documents}
+    return {'documents': _tag_documents(documents, 'pubmed')}
 
   def arxiv_retriever_node(self, state: GraphStateSchema):
     specialized_sources = state['specialized_sources']
@@ -406,7 +436,7 @@ class NeuroRAG:
     for document in documents:
       document.metadata['source'] = document.metadata.get('Title', 'arXiv')
 
-    return {'documents': documents}
+    return {'documents': _tag_documents(documents, 'arxiv')}
 
   def ncbi_protein_db_retriever_node(self, state: GraphStateSchema):
     specialized_sources = state['specialized_sources']
@@ -424,7 +454,7 @@ class NeuroRAG:
       self._debug_print('ncbi_protein_db_retriever_node', e)
       documents = []
 
-    return {'documents': documents}
+    return {'documents': _tag_documents(documents, 'ncbi_protein')}
 
   def ncbi_gene_db_retriever_node(self, state: GraphStateSchema):
     specialized_sources = state['specialized_sources']
@@ -442,7 +472,7 @@ class NeuroRAG:
       self._debug_print('ncbi_gene_db_retriever_node', e)
       documents = []
 
-    return {'documents': documents}
+    return {'documents': _tag_documents(documents, 'ncbi_gene')}
 
   def biorxiv_retriever_node(self, state: GraphStateSchema):
     specialized_sources = state['specialized_sources']
@@ -478,7 +508,7 @@ class NeuroRAG:
       results = []
     documents = [doc for result in results for doc in result]
 
-    return {'documents': documents}
+    return {'documents': _tag_documents(documents, 'biorxiv')}
 
   def medrxiv_retriever_node(self, state: GraphStateSchema):
     specialized_sources = state['specialized_sources']
@@ -514,69 +544,102 @@ class NeuroRAG:
       results = []
     documents = [doc for result in results for doc in result]
 
-    return {'documents': documents}
+    return {'documents': _tag_documents(documents, 'medrxiv')}
 
   def grade_documents_node(self, state: GraphStateSchema):
     query = state['query']
     documents = state['documents']
 
-    self._debug_print('---GRADE DOCUMENTs---')
+    self._debug_print('---GRADE DOCUMENTS---')
 
     if len(documents) == 0:
       return {'documents': [], 'web_search': True}
 
-    unique_documents = list({doc.page_content: doc for doc in documents}.values())
+    # Step 1: Reciprocal Rank Fusion
+    rrf_ranked = reciprocal_rank_fusion(documents)
 
-    self._debug_print(
-      f'---AFTER EXACT DEDUPLICATION: {len(unique_documents)} documents---'
-    )
+    self._debug_print(f'---RRF RANKED: {len(rrf_ranked)} documents---')
 
-    retriever = BM25Retriever.from_documents(unique_documents, k=10)
-    retrieved_documents = retriever.invoke(query)
+    # Step 2: BM25 pre-filter on RRF results
+    retriever = BM25Retriever.from_documents(rrf_ranked, k=min(12, len(rrf_ranked)))
+    candidates = retriever.invoke(query)
 
-    self._debug_print(
-      f'---BM25 TOP CANDIDATES: {len(retrieved_documents)} documents---'
-    )
+    self._debug_print(f'---BM25 CANDIDATES: {len(candidates)} documents---')
 
-    # Grade documents with limited concurrency and timeout
-    async def grade_all_documents():
+    # Step 3: LLM Reranking (scored 0-10)
+    async def rerank_all():
       sem = asyncio.Semaphore(MAX_CONCURRENT_LLM_CALLS)
 
-      async def grade_single(doc):
+      async def rerank_single(doc):
         async with sem:
           try:
-            grade = await self.document_grade_chain.ainvoke(query, doc)
-            return (doc, grade.lower() == 'yes')
+            score = await self.rerank_chain.ainvoke(query, doc.page_content)
+            return (doc, score)
           except Exception as e:
-            self._debug_print('grade_documents_node', e)
-            return (doc, False)
+            self._debug_print('rerank_single', e)
+            return (doc, 0)
 
-      tasks = [grade_single(doc) for doc in retrieved_documents]
-      return await asyncio.gather(*tasks)
+      return await asyncio.gather(*[rerank_single(doc) for doc in candidates])
 
     try:
-      grading_results = asyncio.run(
-        asyncio.wait_for(
-          grade_all_documents(),
-          timeout=GRADE_DOCUMENTS_TIMEOUT,
-        )
+      rerank_results = asyncio.run(
+        asyncio.wait_for(rerank_all(), timeout=GRADE_DOCUMENTS_TIMEOUT)
       )
     except asyncio.TimeoutError:
       self._debug_print(
-        'grade_documents_node timed out after', GRADE_DOCUMENTS_TIMEOUT, 's'
+        'grade_documents_node reranking timed out after', GRADE_DOCUMENTS_TIMEOUT, 's'
       )
       raise RuntimeError(
-        f'Document grading timed out after {GRADE_DOCUMENTS_TIMEOUT}s.'
+        f'Document reranking timed out after {GRADE_DOCUMENTS_TIMEOUT}s.'
       ) from None
-    filtered_documents = [doc for doc, is_relevant in grading_results if is_relevant]
-    filtered_documents = filtered_documents[:3]
 
-    self._debug_print(f'---FINAL DOCUMENTS NUMBER: {len(filtered_documents)}---')
+    rerank_results.sort(key=lambda x: x[1], reverse=True)
+    top_docs = [doc for doc, score in rerank_results if score >= 5][:5]
+
+    self._debug_print(
+      f'---RERANKED TOP DOCS: {len(top_docs)} '
+      f'(scores: {[s for _, s in rerank_results[:5]]})---'
+    )
+
+    if len(top_docs) == 0:
+      state['documents'].clear()
+      return {'documents': [], 'web_search': True}
+
+    # Step 4: Contextual Compression
+    async def compress_all():
+      sem = asyncio.Semaphore(MAX_CONCURRENT_LLM_CALLS)
+
+      async def compress_single(doc):
+        async with sem:
+          try:
+            compressed = await self.compression_chain.ainvoke(
+              query, doc.page_content
+            )
+            if compressed:
+              return Document(page_content=compressed, metadata=doc.metadata)
+            return None
+          except Exception as e:
+            self._debug_print('compress_single', e)
+            return doc
+
+      return await asyncio.gather(*[compress_single(doc) for doc in top_docs])
+
+    try:
+      compressed_docs = asyncio.run(
+        asyncio.wait_for(compress_all(), timeout=GRADE_DOCUMENTS_TIMEOUT)
+      )
+    except asyncio.TimeoutError:
+      self._debug_print('contextual compression timed out')
+      compressed_docs = top_docs
+
+    final_documents = [doc for doc in compressed_docs if doc is not None]
+
+    self._debug_print(f'---FINAL DOCUMENTS: {len(final_documents)}---')
 
     state['documents'].clear()
     return {
-      'documents': filtered_documents,
-      'web_search': len(filtered_documents) == 0,
+      'documents': final_documents,
+      'web_search': len(final_documents) == 0,
     }
 
   def decide_to_generate_node(self, state: GraphStateSchema):
