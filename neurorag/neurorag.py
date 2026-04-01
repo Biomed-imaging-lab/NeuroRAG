@@ -28,10 +28,10 @@ from neurorag.chains.decomposition import DecompositionChain
 from neurorag.chains.document_grade import DocumentGradeChain
 from neurorag.chains.generation import GenerationChain
 from neurorag.chains.hallucinations import HallucinationsChain
-from neurorag.chains.rerank import RerankChain
 from neurorag.chains.hyde import HyDEChain
 from neurorag.chains.ncbi_gene import NCBIGeneChain
 from neurorag.chains.ncbi_protein import NCBIProteinChain
+from neurorag.chains.rerank import RerankChain
 from neurorag.chains.route import RouteChain
 from neurorag.chains.step_back import StepBackChain
 from neurorag.models.OpenRouter import OpenRouter
@@ -64,9 +64,7 @@ def _tag_documents(documents: list[Document], retriever_name: str) -> list[Docum
   return documents
 
 
-def reciprocal_rank_fusion(
-  documents: list[Document], k: int = 60
-) -> list[Document]:
+def reciprocal_rank_fusion(documents: list[Document], k: int = 60) -> list[Document]:
   """Merge documents from multiple retrievers using RRF scoring."""
   scores: dict[str, float] = {}
   doc_map: dict[str, Document] = {}
@@ -112,6 +110,7 @@ class NeuroRAG:
     max_retries: int = 1,
     llms=None,
     is_for_arena: bool = False,
+    answer_style: str = '',
   ) -> None:
     self.temperature = temperature
     self.debug = debug
@@ -119,6 +118,7 @@ class NeuroRAG:
     self.max_retries = max_retries
     self.llms = llms
     self.is_for_arena = is_for_arena
+    self.answer_style = answer_style
     self.llm = OpenRouter(
       model=model,
       temperature=self.temperature,
@@ -163,7 +163,10 @@ class NeuroRAG:
     self.compression_chain = ContextualCompressionChain(self.llm)
     self.web_search_chain = TavilySearchResults(k=self.max_retries * 3)
     self.generation_chain = GenerationChain(
-      self.temperature, llms=self.llms, is_for_arena=self.is_for_arena
+      self.temperature,
+      llms=self.llms,
+      is_for_arena=self.is_for_arena,
+      answer_style=self.answer_style,
     )
     self.hallucinations_chain = HallucinationsChain(self.llm)
     self.answer_grade_chain = AnswerGradeChain(self.llm)
@@ -612,9 +615,7 @@ class NeuroRAG:
       async def compress_single(doc):
         async with sem:
           try:
-            compressed = await self.compression_chain.ainvoke(
-              query, doc.page_content
-            )
+            compressed = await self.compression_chain.ainvoke(query, doc.page_content)
             if compressed:
               return Document(page_content=compressed, metadata=doc.metadata)
             return None
