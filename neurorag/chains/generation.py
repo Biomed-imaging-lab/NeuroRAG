@@ -50,9 +50,11 @@ class GenerationChain:
     self.temperature = temperature
     self.llms = llms or {
       'openai': OpenRouter(model='openai/gpt-4.1', temperature=temperature),
-      'mistral': OpenRouter(model='mistralai/mistral-large', temperature=temperature),
+      'mistral': OpenRouter(
+        model='mistralai/mistral-large-2512', temperature=temperature
+      ),
       'claude': OpenRouter(
-        model='anthropic/claude-3.5-sonnet', temperature=temperature
+        model='anthropic/claude-sonnet-4.5', temperature=temperature
       ),
     }
 
