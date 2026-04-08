@@ -10,6 +10,7 @@ sys.path.append('../neurorag/chains')
 sys.path.append(project_root)
 
 import json
+import random
 import sys
 import warnings
 from typing import Any, Optional
@@ -60,6 +61,7 @@ def get_openrouter_llm(model_name: str) -> Optional[Any]:
 
 
 def get_neurorag_answer(question: str) -> tuple[str, float]:
+  return 'test', 0.0
   """Get answer from NeuroRAG with timing"""
   start_time = time.time()
   neurorag = NeuroRAG(temperature=0, debug=True, is_for_arena=True)
@@ -82,17 +84,13 @@ def get_competitor_answer(question: str, model_name: str) -> tuple[str, float]:
 
 def save_comparison(
   question: str,
-  neurorag_answer: str,
-  competitor_answer: str,
-  competitor_model: str,
+  answers: dict[str, str],
   user_choice: str,
 ) -> None:
   """Save comparison result to session state"""
   comparison = {
     'question': question,
-    'neurorag_answer': neurorag_answer,
-    'competitor_answer': competitor_answer,
-    'competitor_model': competitor_model,
+    'answers': answers,
     'user_choice': user_choice,
     'timestamp': str(pd.Timestamp.now()),
   }
@@ -138,11 +136,7 @@ def load_dataset(dataset_path: str) -> tuple[list[str], list[str], Optional[list
     return [], [], None
 
 
-def build_masked_names(model_list):
-  return {name: f'Model {i + 1}' for i, name in enumerate(model_list)}
-
-
-MASKED_NAMES = build_masked_names(list(OPENROUTER_MODELS.keys()) + ['NeuroRAG'])
+_MODEL_EMOJI = '🔬'
 
 
 def evaluate_models_on_dataset(
@@ -192,7 +186,7 @@ def evaluate_models_on_dataset(
         'rouge_l': rogue_l_metric(expected_answers, results['neurorag_answers']),
         'rouge_1': rogue_1_metric(expected_answers, results['neurorag_answers']),
       }
-      results['metrics'][MASKED_NAMES['NeuroRAG']] = neurorag_metrics
+      results['metrics']['NeuroRAG'] = neurorag_metrics
     except Exception as e:
       st.error(f'Error calculating NeuroRAG metrics: {e}')
       results['metrics']['NeuroRAG'] = {'error': str(e)}
@@ -298,10 +292,6 @@ with st.sidebar:
   if not selected_models:
     st.warning('Please select at least one competitor model')
 
-  selected_models_masked = [MASKED_NAMES[m] for m in selected_models]
-
-  st.session_state.selected_models_masked = selected_models_masked
-
   # Dataset evaluation section
   st.markdown('---')
   st.subheader('📊 Dataset Evaluation')
@@ -399,7 +389,8 @@ with st.sidebar:
     st.header('📝 History')
     for i, comp in enumerate(st.session_state.comparison_history[-5:]):  # Show last 5
       with st.expander(f'Q{i + 1}: {comp["question"][:50]}...'):
-        st.write(f'**Model:** {MASKED_NAMES.get(comp["competitor_model"], "Model")}')
+        models = list(comp.get('answers', {}).keys())
+        st.write(f'**Models:** {", ".join(models)}')
         st.write(f'**Choice:** {comp["user_choice"]}')
 
 question = st.text_area(
@@ -427,72 +418,65 @@ if st.button(
         competitor_answers[model_name] = answer
         competitor_times[model_name] = elapsed_time
 
+      # Build a shuffled display order: NeuroRAG + competitors
+      all_entries = [('NeuroRAG', neurorag_answer, neurorag_time)]
+      for model_name in selected_models:
+        all_entries.append(
+          (model_name, competitor_answers[model_name], competitor_times[model_name])
+        )
+      random.shuffle(all_entries)
+
+      # Map shuffled positions to "Model 1", "Model 2", …
+      display_order = []  # [(real_name, answer, time, masked_label), …]
+      for idx, (real_name, answer, elapsed) in enumerate(all_entries):
+        display_order.append((real_name, answer, elapsed, f'Model {idx + 1}'))
+
       st.session_state.current_question = question
+      st.session_state.display_order = display_order
       st.session_state.neurorag_answer = neurorag_answer
-      st.session_state.neurorag_time = neurorag_time
       st.session_state.competitor_answers = competitor_answers
-      st.session_state.competitor_times = competitor_times
       st.session_state.selected_models = selected_models
 
 if hasattr(st.session_state, 'current_question') and st.session_state.current_question:
-  # Create columns: 1 for NeuroRAG + number of competitor models
-  num_competitors = len(st.session_state.selected_models)
-  cols = st.columns(1 + num_competitors)
+  display_order = st.session_state.display_order
+  cols = st.columns(len(display_order))
 
-  with cols[0]:
-    neurorag_time = st.session_state.get('neurorag_time', 0)
-    st.subheader(f'🧠 {MASKED_NAMES["NeuroRAG"]}')
-    st.caption(f'⏱️ {neurorag_time:.1f}s')
-    st.write(st.session_state.neurorag_answer)
-
-  # Display competitor models in remaining columns
-  for i, model_name in enumerate(st.session_state.selected_models):
-    masked = MASKED_NAMES[model_name]
-    with cols[i + 1]:
-      competitor_time = st.session_state.get('competitor_times', {}).get(model_name, 0)
-      st.subheader(f'🤖 {masked}')
-      st.caption(f'⏱️ {competitor_time:.1f}s')
-      st.write(st.session_state.competitor_answers[model_name])
+  for col, (real_name, answer, elapsed, masked_label) in zip(cols, display_order):
+    with col:
+      st.subheader(f'{_MODEL_EMOJI} {masked_label}')
+      st.caption(f'⏱️ {elapsed:.1f}s')
+      st.write(answer)
 
   st.markdown('---')
   st.subheader('🗳️ Vote on the Best Answer')
 
-  vote_options = (
-    [f'{MASKED_NAMES["NeuroRAG"]} is Best']
-    + [f'{MASKED_NAMES[model]} is Best' for model in st.session_state.selected_models]
-    + ['Tie', 'All are Bad']
-  )
-  num_vote_cols = len(vote_options)
-  vote_cols = st.columns(num_vote_cols)
+  vote_options = [entry[3] + ' is Best' for entry in display_order] + [
+    'Tie',
+    'All are Bad',
+  ]
+  vote_cols = st.columns(len(vote_options))
 
   for i, option in enumerate(vote_options):
     with vote_cols[i]:
-      if st.button(
-        option,
-        type='secondary',
-        use_container_width=True,
-      ):
-        # Determine which model was voted as best
-        if option == f'{MASKED_NAMES["NeuroRAG"]} is Best':
-          best_model = MASKED_NAMES['NeuroRAG']
-        elif option == 'Tie':
-          best_model = 'Tie'
-        elif option == 'All are Bad':
-          best_model = 'All are Bad'
-        else:
-          best_model = option.replace(' is Best', '')
+      if st.button(option, type='secondary', use_container_width=True):
+        # Resolve masked label back to real name
+        best_model = option
+        if option not in ('Tie', 'All are Bad'):
+          label = option.replace(' is Best', '')
+          for real_name, _, _, masked_label in display_order:
+            if masked_label == label:
+              best_model = real_name
+              break
 
-        for model_name in st.session_state.selected_models:
-          save_comparison(
-            st.session_state.current_question,
-            st.session_state.neurorag_answer,
-            st.session_state.competitor_answers[model_name],
-            model_name,
-            best_model,
-          )
+        all_answers = {'NeuroRAG': st.session_state.neurorag_answer}
+        all_answers.update(st.session_state.competitor_answers)
+        save_comparison(
+          st.session_state.current_question,
+          all_answers,
+          best_model,
+        )
 
         st.success(f'Vote recorded! {option}')
-        # Clear current question
         del st.session_state.current_question
         st.rerun()
 
@@ -539,7 +523,7 @@ if (
     if 'error' not in metrics:
       metrics_data.append(
         {
-          'Model': MASKED_NAMES.get(model_name, model_name),
+          'Model': model_name,
           'Cosine Similarity': f'{metrics["cosine_similarity"]:.4f}',
           'BLEU': f'{metrics["bleu"]:.4f}',
           'ROUGE-L': f'{metrics["rouge_l"]:.4f}',
