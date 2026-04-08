@@ -13,7 +13,7 @@ import json
 import random
 import sys
 import warnings
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -116,7 +116,7 @@ def get_available_datasets() -> list[str]:
 
 def load_dataset(
   dataset_path: str,
-) -> tuple[list[str], Optional[list[str]], Optional[list[str]]]:
+) -> tuple[list[str], list[str] | None, list[str] | None]:
   """Load dataset. Returns (questions, answers_or_None, categories_or_None)."""
   try:
     df = pd.read_csv(dataset_path)
@@ -143,7 +143,7 @@ def evaluate_models_on_dataset(
   questions: list[str],
   expected_answers: list[str],
   selected_models: list[str],
-  categories: Optional[list[str]] = None,
+  categories: list[str] | None = None,
 ) -> dict:
   """Evaluate all models on the dataset and return metrics"""
   results: dict[str, Any] = {
