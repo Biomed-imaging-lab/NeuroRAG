@@ -50,10 +50,10 @@ OPENROUTER_MODELS = {
 }
 
 
-def get_openrouter_llm(model_name: str) -> Optional[Any]:
+def get_openrouter_llm(model_name: str) -> str | None:
   """Get OpenRouter LLM instance"""
   try:
-    llm = OpenRouter(model=model_name, temperature=0, max_tokens=2000)
+    llm = OpenRouter(model=model_name, temperature=0)
     return llm | StrOutputParser()
   except Exception as e:
     st.error(f'Error initializing OpenRouter model: {e}')
