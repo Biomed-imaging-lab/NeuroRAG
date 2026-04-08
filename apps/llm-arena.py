@@ -115,25 +115,26 @@ def get_available_datasets() -> list[str]:
   return csv_files
 
 
-def load_dataset(dataset_path: str) -> tuple[list[str], list[str], Optional[list[str]]]:
-  """Load dataset and return questions, answers, and optional categories"""
+def load_dataset(
+  dataset_path: str,
+) -> tuple[list[str], Optional[list[str]], Optional[list[str]]]:
+  """Load dataset. Returns (questions, answers_or_None, categories_or_None)."""
   try:
     df = pd.read_csv(dataset_path)
-    if 'question' in df.columns and 'answer' in df.columns:
-      questions = df['question'].dropna().tolist()
-      answers = df['answer'].dropna().tolist()
-      categories = None
-      if 'category' in df.columns:
-        categories = df['category'].fillna('Unknown').tolist()
-      return questions, answers, categories
-    else:
+    if 'question' not in df.columns:
       st.error(
-        f"Dataset must have 'question' and 'answer' columns. Found columns: {list(df.columns)}"
+        f"Dataset must have a 'question' column. Found columns: {list(df.columns)}"
       )
-      return [], [], None
+      return [], None, None
+    questions = df['question'].dropna().tolist()
+    answers = df['answer'].dropna().tolist() if 'answer' in df.columns else None
+    categories = (
+      df['category'].fillna('Unknown').tolist() if 'category' in df.columns else None
+    )
+    return questions, answers, categories
   except Exception as e:
     st.error(f'Error loading dataset: {e}')
-    return [], [], None
+    return [], None, None
 
 
 _MODEL_EMOJI = '🔬'
@@ -308,62 +309,82 @@ with st.sidebar:
       dataset_path = f'../datasets/{selected_dataset}'
       questions, answers, categories = load_dataset(dataset_path)
 
-      if questions and answers:
+      if questions:
+        has_answers = answers is not None and len(answers) > 0
         category_info = (
           f' (with {len(set(categories))} categories)' if categories else ''
         )
+        mode_label = (
+          'with reference answers' if has_answers else 'questions only (interactive)'
+        )
         st.success(
-          f'Loaded {len(questions)} questions from {selected_dataset}{category_info}'
+          f'Loaded {len(questions)} questions from {selected_dataset} — {mode_label}{category_info}'
         )
 
-        if st.button('🚀 Run Evaluation', type='primary'):
-          if len(questions) > 10:
-            st.warning('Dataset is large. This may take a while...')
-
-          evaluation_results = evaluate_models_on_dataset(
-            questions, answers, selected_models, categories
-          )
-          st.session_state.evaluation_results = evaluation_results
-          st.success('Evaluation completed!')
-          st.rerun()
+        if has_answers:
+          if st.button('🚀 Run Evaluation', type='primary'):
+            if len(questions) > 10:
+              st.warning('Dataset is large. This may take a while...')
+            evaluation_results = evaluate_models_on_dataset(
+              questions, answers, selected_models, categories
+            )
+            st.session_state.evaluation_results = evaluation_results
+            st.success('Evaluation completed!')
+            st.rerun()
+        else:
+          if st.button('🚀 Start Interactive Comparison', type='primary'):
+            st.session_state.arena_questions = questions
+            st.session_state.arena_question_idx = 0
+            st.rerun()
 
   # File upload
+  st.markdown('**Or upload your own dataset:**')
   uploaded_file = st.file_uploader(
-    'Upload CSV file with question and answer columns',
+    'Upload CSV with a "question" column (and optional "answer", "category")',
     type=['csv'],
-    help='CSV must have columns named "question" and "answer". Optional "category" column for category-based metrics.',
+    help='CSV must have a "question" column. If "answer" is present, metrics will be computed. Otherwise, interactive comparison mode is used.',
   )
 
   if uploaded_file is not None:
     try:
       df = pd.read_csv(uploaded_file)
-      if 'question' in df.columns and 'answer' in df.columns:
+      if 'question' not in df.columns:
+        st.error(
+          f"Uploaded file must have a 'question' column. Found: {list(df.columns)}"
+        )
+      else:
         questions = df['question'].dropna().tolist()
-        answers = df['answer'].dropna().tolist()
-        categories = None
-        if 'category' in df.columns:
-          categories = df['category'].fillna('Unknown').tolist()
-
+        answers = df['answer'].dropna().tolist() if 'answer' in df.columns else None
+        categories = (
+          df['category'].fillna('Unknown').tolist()
+          if 'category' in df.columns
+          else None
+        )
+        has_answers = answers is not None and len(answers) > 0
+        mode_label = (
+          'with reference answers' if has_answers else 'questions only (interactive)'
+        )
         category_info = (
           f' (with {len(set(categories))} categories)' if categories else ''
         )
-        st.success(f'Uploaded dataset with {len(questions)} questions{category_info}')
+        st.success(f'Uploaded {len(questions)} questions — {mode_label}{category_info}')
 
-        if st.button('🚀 Evaluate Uploaded Dataset', type='primary'):
-          if len(questions) > 10:
-            st.warning('Dataset is large. This may take a while...')
-
-          evaluation_results = evaluate_models_on_dataset(
-            questions, answers, selected_models, categories
-          )
-          evaluation_results['dataset_name'] = uploaded_file.name
-          st.session_state.evaluation_results = evaluation_results
-          st.success('Evaluation completed!')
-          st.rerun()
-      else:
-        st.error(
-          f"Uploaded file must have 'question' and 'answer' columns. Found: {list(df.columns)}"
-        )
+        if has_answers:
+          if st.button('🚀 Evaluate Uploaded Dataset', type='primary'):
+            if len(questions) > 10:
+              st.warning('Dataset is large. This may take a while...')
+            evaluation_results = evaluate_models_on_dataset(
+              questions, answers, selected_models, categories
+            )
+            evaluation_results['dataset_name'] = uploaded_file.name
+            st.session_state.evaluation_results = evaluation_results
+            st.success('Evaluation completed!')
+            st.rerun()
+        else:
+          if st.button('🚀 Start Interactive Comparison', type='primary'):
+            st.session_state.arena_questions = questions
+            st.session_state.arena_question_idx = 0
+            st.rerun()
     except Exception as e:
       st.error(f'Error reading uploaded file: {e}')
 
@@ -392,49 +413,102 @@ with st.sidebar:
         st.write(f'**Models:** {", ".join(models)}')
         st.write(f'**Choice:** {comp["user_choice"]}')
 
-question = st.text_area(
-  'Enter your question:',
-  placeholder="Ask anything you'd like to compare between NeuroRAG and the selected model...",
-  height=100,
-)
+# Interactive dataset comparison mode
+if 'arena_questions' in st.session_state:
+  idx = st.session_state.arena_question_idx
+  arena_qs = st.session_state.arena_questions
 
-if st.button(
-  'Generate Answers',
-  type='primary',
-  disabled=not question.strip() or not selected_models,
-):
-  if question.strip() and selected_models:
-    with st.spinner('Generating answers...'):
-      neurorag_answer, neurorag_time = get_neurorag_answer(question)
+  if idx < len(arena_qs):
+    question = arena_qs[idx]
 
-      # Generate answers for all selected competitor models
-      competitor_answers = {}
-      competitor_times = {}
-      for model_name in selected_models:
-        answer, elapsed_time = get_competitor_answer(
-          question, OPENROUTER_MODELS[model_name]
-        )
-        competitor_answers[model_name] = answer
-        competitor_times[model_name] = elapsed_time
+    if (
+      not hasattr(st.session_state, 'current_question')
+      or not st.session_state.current_question
+    ):
+      st.info(f'**Generating answers for question {idx + 1} / {len(arena_qs)}…**')
+      st.markdown(f'> {question}')
 
-      # Build a shuffled display order: NeuroRAG + competitors
-      all_entries = [('NeuroRAG', neurorag_answer, neurorag_time)]
-      for model_name in selected_models:
-        all_entries.append(
-          (model_name, competitor_answers[model_name], competitor_times[model_name])
-        )
-      random.shuffle(all_entries)
+      with st.spinner('Generating answers...'):
+        neurorag_answer, neurorag_time = get_neurorag_answer(question)
+        competitor_answers = {}
+        competitor_times = {}
+        for model_name in selected_models:
+          answer, elapsed = get_competitor_answer(
+            question, OPENROUTER_MODELS[model_name]
+          )
+          competitor_answers[model_name] = answer
+          competitor_times[model_name] = elapsed
 
-      # Map shuffled positions to "Model 1", "Model 2", …
-      display_order = []  # [(real_name, answer, time, masked_label), …]
-      for idx, (real_name, answer, elapsed) in enumerate(all_entries):
-        display_order.append((real_name, answer, elapsed, f'Model {idx + 1}'))
+        all_entries = [('NeuroRAG', neurorag_answer, neurorag_time)]
+        for m in selected_models:
+          all_entries.append((m, competitor_answers[m], competitor_times[m]))
+        random.shuffle(all_entries)
 
-      st.session_state.current_question = question
-      st.session_state.display_order = display_order
-      st.session_state.neurorag_answer = neurorag_answer
-      st.session_state.competitor_answers = competitor_answers
-      st.session_state.selected_models = selected_models
+        display_order = [
+          (name, ans, t, f'Model {i + 1}')
+          for i, (name, ans, t) in enumerate(all_entries)
+        ]
+
+        st.session_state.current_question = question
+        st.session_state.display_order = display_order
+        st.session_state.neurorag_answer = neurorag_answer
+        st.session_state.competitor_answers = competitor_answers
+        st.session_state.selected_models = selected_models
+        st.rerun()
+    else:
+      st.info(f'**Dataset question {idx + 1} / {len(arena_qs)}**')
+  else:
+    st.success(f'All {len(arena_qs)} questions completed!')
+    if st.button('🔄 Restart Dataset'):
+      st.session_state.arena_question_idx = 0
+      st.rerun()
+    if st.button('✅ Finish'):
+      del st.session_state.arena_questions
+      del st.session_state.arena_question_idx
+      st.rerun()
+else:
+  question = st.text_area(
+    'Enter your question:',
+    placeholder="Ask anything you'd like to compare between NeuroRAG and the selected model...",
+    height=100,
+  )
+
+if 'arena_questions' not in st.session_state:
+  if st.button(
+    'Generate Answers',
+    type='primary',
+    disabled=not question.strip() or not selected_models,
+  ):
+    if question.strip() and selected_models:
+      with st.spinner('Generating answers...'):
+        neurorag_answer, neurorag_time = get_neurorag_answer(question)
+
+        competitor_answers = {}
+        competitor_times = {}
+        for model_name in selected_models:
+          answer, elapsed_time = get_competitor_answer(
+            question, OPENROUTER_MODELS[model_name]
+          )
+          competitor_answers[model_name] = answer
+          competitor_times[model_name] = elapsed_time
+
+        all_entries = [('NeuroRAG', neurorag_answer, neurorag_time)]
+        for model_name in selected_models:
+          all_entries.append(
+            (model_name, competitor_answers[model_name], competitor_times[model_name])
+          )
+        random.shuffle(all_entries)
+
+        display_order = [
+          (name, ans, t, f'Model {i + 1}')
+          for i, (name, ans, t) in enumerate(all_entries)
+        ]
+
+        st.session_state.current_question = question
+        st.session_state.display_order = display_order
+        st.session_state.neurorag_answer = neurorag_answer
+        st.session_state.competitor_answers = competitor_answers
+        st.session_state.selected_models = selected_models
 
 if hasattr(st.session_state, 'current_question') and st.session_state.current_question:
   display_order = st.session_state.display_order
@@ -475,8 +549,9 @@ if hasattr(st.session_state, 'current_question') and st.session_state.current_qu
           best_model,
         )
 
-        st.success(f'Vote recorded! {option}')
         del st.session_state.current_question
+        if 'arena_questions' in st.session_state:
+          st.session_state.arena_question_idx += 1
         st.rerun()
 
 # Instructions
