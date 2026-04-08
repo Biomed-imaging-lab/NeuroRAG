@@ -328,7 +328,6 @@ with st.sidebar:
           st.rerun()
 
   # File upload
-  st.markdown('**Or upload your own dataset:**')
   uploaded_file = st.file_uploader(
     'Upload CSV file with question and answer columns',
     type=['csv'],
