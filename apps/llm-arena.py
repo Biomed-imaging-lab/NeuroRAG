@@ -61,7 +61,6 @@ def get_openrouter_llm(model_name: str) -> Any | None:
 
 
 def get_neurorag_answer(question: str) -> tuple[str, float]:
-  return 'test', 0.0
   """Get answer from NeuroRAG with timing"""
   start_time = time.time()
   neurorag = NeuroRAG(temperature=0, debug=True, is_for_arena=True)
