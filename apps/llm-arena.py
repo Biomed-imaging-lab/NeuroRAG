@@ -278,7 +278,7 @@ Compare NeuroRAG's performance against other AI models. Ask a question and see h
 """)
 
 with st.sidebar:
-  st.subheader('🤖 Competitor Models')
+  st.subheader('🤖 Competitor models')
   st.markdown('Select up to 3 models to compare with NeuroRAG:')
 
   real_model_names = list(OPENROUTER_MODELS.keys())
@@ -295,7 +295,7 @@ with st.sidebar:
 
   # Dataset evaluation section
   st.markdown('---')
-  st.subheader('📊 Dataset Evaluation')
+  st.subheader('📊 Dataset evaluation')
 
   # Available datasets
   available_datasets = get_available_datasets()
@@ -322,7 +322,7 @@ with st.sidebar:
         )
 
         if has_answers:
-          if st.button('🚀 Run Evaluation', type='primary'):
+          if st.button('🚀 Run evaluation', type='primary'):
             if len(questions) > 10:
               st.warning('Dataset is large. This may take a while...')
             evaluation_results = evaluate_models_on_dataset(
@@ -332,7 +332,7 @@ with st.sidebar:
             st.success('Evaluation completed!')
             st.rerun()
         else:
-          if st.button('🚀 Start Interactive Comparison', type='primary'):
+          if st.button('🚀 Start interactive comparison', type='primary'):
             st.session_state.arena_questions = questions
             st.session_state.arena_question_idx = 0
             st.rerun()
@@ -390,12 +390,12 @@ with st.sidebar:
 
   # Export comparison results
   st.markdown('---')
-  st.subheader('📤 Export Results')
+  st.subheader('📤 Export results')
 
   if st.session_state.comparison_history:
     json_data = export_results()
     st.download_button(
-      label='📊 Download Comparison Results',
+      label='📊 Download comparison results',
       data=json_data,
       file_name='llm_arena_results.json',
       mime='application/json',
@@ -458,14 +458,17 @@ if 'arena_questions' in st.session_state:
     else:
       st.info(f'**Dataset question {idx + 1} / {len(arena_qs)}**')
   else:
-    st.success(f'All {len(arena_qs)} questions completed!')
-    if st.button('🔄 Restart Dataset'):
-      st.session_state.arena_question_idx = 0
-      st.rerun()
-    if st.button('✅ Finish'):
-      del st.session_state.arena_questions
-      del st.session_state.arena_question_idx
-      st.rerun()
+    st.success(f'All {len(arena_qs)} questions completed')
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+      if st.button('🔄 Restart dataset', use_container_width=True):
+        st.session_state.arena_question_idx = 0
+        st.rerun()
+    with btn_col2:
+      if st.button('✅ Finish', use_container_width=True, type='primary'):
+        del st.session_state.arena_questions
+        del st.session_state.arena_question_idx
+        st.rerun()
 else:
   question = st.text_area(
     'Enter your question:',
@@ -521,7 +524,7 @@ if hasattr(st.session_state, 'current_question') and st.session_state.current_qu
       st.write(answer)
 
   st.markdown('---')
-  st.subheader('🗳️ Vote on the Best Answer')
+  st.subheader('🗳️ Vote on the best answer')
 
   vote_options = [entry[3] + ' is Best' for entry in display_order] + [
     'Tie',
