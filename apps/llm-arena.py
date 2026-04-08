@@ -50,7 +50,7 @@ OPENROUTER_MODELS = {
 }
 
 
-def get_openrouter_llm(model_name: str) -> str | None:
+def get_openrouter_llm(model_name: str) -> Any | None:
   """Get OpenRouter LLM instance"""
   try:
     llm = OpenRouter(model=model_name, temperature=0)
