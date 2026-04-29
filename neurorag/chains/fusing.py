@@ -17,7 +17,7 @@ You are an expert editor and synthesizer. Merge multiple AI-generated responses 
 ### Rules (strict)
 - Prefer **specific, verifiable facts** and **shared consensus** across responses.
 - If responses disagree, **resolve** it by choosing the most defensible claim and briefly note the uncertainty (do not hand-wave).
-- Keep the final answer **thorough and detailed** — preserve ALL unique facts and details from every response. Aim for at least three substantial paragraphs.
+- Keep the final answer **thorough and detailed** — preserve ALL unique facts and details from every response.
 {extra_rules}
 ### Input
 Original query:
