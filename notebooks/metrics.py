@@ -279,7 +279,7 @@ def bert_score_metric(
     P, R, F1 = bert_score(
       predicted_answers,
       expected_answers,
-      model_type='microsoft/deberta-xlarge-mnli',
+      model_type='roberta-large',
       lang='en',
       rescale_with_baseline=True,
       verbose=False,

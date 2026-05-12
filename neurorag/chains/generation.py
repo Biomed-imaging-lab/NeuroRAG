@@ -17,7 +17,7 @@ class FuseData(TypedDict):
   query: str
 
 
-template = """You are a biomedical expert. Answer the QUERY using CONTEXT as your primary source.
+_TEMPLATE_DETAILED = """You are a biomedical expert. Answer the QUERY using CONTEXT as your primary source.
 
 RULES:
 - Every sentence must carry a concrete fact: a name, mechanism, pathway, number, or experimental finding. No filler.
@@ -25,6 +25,19 @@ RULES:
 - Use specific details from CONTEXT: gene/protein names, brain regions, cell types, dosages, statistical results, study conclusions.
 - If you have relevant knowledge beyond CONTEXT, include it.
 - Never write "it is important to note", "further research is needed", "in conclusion", or similar padding.
+
+QUERY:
+{query}
+
+CONTEXT:
+{context}
+"""
+
+_TEMPLATE_CONCISE = """You are a biomedical expert.
+
+OUTPUT RULE: {answer_style}
+
+Answer the QUERY using CONTEXT. Be direct and factual — no preamble, no filler, no caveats.
 
 QUERY:
 {query}
@@ -48,6 +61,10 @@ class GenerationChain:
       is_for_arena=is_for_arena, answer_style=answer_style
     )
     self.temperature = temperature
+    if answer_style:
+      self._generation_template = _TEMPLATE_CONCISE.replace('{answer_style}', answer_style)
+    else:
+      self._generation_template = _TEMPLATE_DETAILED
     self.llms = llms or {
       'openai': OpenRouter(model='openai/gpt-4.1', temperature=temperature),
       'mistral': OpenRouter(
@@ -84,7 +101,7 @@ class GenerationChain:
         return responses[0]
 
   def invoke(self, query: str, context: str, user_prompt=None) -> str:
-    rag_prompt = user_prompt or PromptTemplate.from_template(template)
+    rag_prompt = user_prompt or PromptTemplate.from_template(self._generation_template)
     chains = {}
     for name in self.llms:
       chains[name] = rag_prompt | self.llms[name] | StrOutputParser()

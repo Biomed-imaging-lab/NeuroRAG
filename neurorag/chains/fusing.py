@@ -10,14 +10,14 @@ class FusingSchema(BaseModel):
   final_response: str = Field(description='The final fused response.')
 
 
-template = """
+_TEMPLATE_DETAILED = """
 ### Task
 You are an expert editor and synthesizer. Merge multiple AI-generated responses into ONE best answer.
 
 ### Rules (strict)
 - Prefer **specific, verifiable facts** and **shared consensus** across responses.
-- If responses disagree, **resolve** it by choosing the most defensible claim and briefly note the uncertainty (do not hand-wave).
-- Keep the final answer **thorough and detailed** — preserve ALL unique facts and details from every response.
+- If responses disagree, **resolve** it by choosing the most defensible claim and briefly note the uncertainty.
+- Keep the final answer thorough — preserve all unique, non-redundant facts.
 {extra_rules}
 ### Input
 Original query:
@@ -28,7 +28,32 @@ Individual responses:
 
 ### Output
 Return STRICTLY valid JSON following these format instructions.
-IMPORTANT: Put the Markdown answer inside the `final_response` field exactly.
+IMPORTANT: Put the answer inside the `final_response` field exactly.
+
+{format_instructions}
+"""
+
+_TEMPLATE_CONCISE = """
+### Task
+You are an expert editor. Pick the single BEST response from the candidates below and compress it to match the OUTPUT RULE exactly.
+
+### OUTPUT RULE (hard limit — overrides everything else)
+{answer_style}
+
+### Rules
+- Choose the most accurate and factual candidate.
+- Remove all redundancy, caveats, and background context.
+- Keep only the core fact(s) needed to answer the query.
+
+### Input
+Original query:
+{query}
+
+Candidate responses:
+{responses}
+
+### Output
+Return STRICTLY valid JSON. Put the compressed answer inside `final_response`.
 
 {format_instructions}
 """
@@ -40,18 +65,25 @@ parser = PydanticOutputParser(pydantic_object=FusingSchema)
 
 class FusingChain:
   def __init__(self, is_for_arena: bool = False, answer_style: str = ''):
-    extra_rules = ''
-    if is_for_arena:
-      extra_rules += _ARENA_RULE
     if answer_style:
-      extra_rules += f'- ANSWER STYLE: {answer_style}\n'
-    prompt = PromptTemplate(
-      template=template,
-      input_variables=['query', 'responses'],
-      partial_variables={
+      template = _TEMPLATE_CONCISE
+      partial_vars = {
+        'format_instructions': parser.get_format_instructions(),
+        'answer_style': answer_style,
+      }
+      input_vars = ['query', 'responses']
+    else:
+      extra_rules = _ARENA_RULE if is_for_arena else ''
+      template = _TEMPLATE_DETAILED
+      partial_vars = {
         'format_instructions': parser.get_format_instructions(),
         'extra_rules': extra_rules,
-      },
+      }
+      input_vars = ['query', 'responses']
+    prompt = PromptTemplate(
+      template=template,
+      input_variables=input_vars,
+      partial_variables=partial_vars,
     )
     llm = OpenRouter(model='openai/gpt-4.1', temperature=0)
     self.chain = (
