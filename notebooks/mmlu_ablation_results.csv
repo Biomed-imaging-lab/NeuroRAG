@@ -1,0 +1,3 @@
+experiment_name,clinical_knowledge_accuracy,average_accuracy
+All enabled,0.04905660377358491,0.04905660377358491
+No retrievers,0.04905660377358491,0.04905660377358491
