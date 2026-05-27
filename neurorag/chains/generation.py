@@ -1,5 +1,4 @@
 from operator import itemgetter
-from typing import TypedDict
 
 from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -8,14 +7,6 @@ from langchain_core.runnables import RunnableLambda, RunnableSerializable
 from neurorag.chains.fusing import FusingChain, FusingSchema
 from neurorag.chains.json_extractor import JsonExtractor
 from neurorag.models.OpenRouter import OpenRouter
-
-
-class FuseData(TypedDict):
-  gpt_res: str
-  mistral_res: str
-  biomistral_res: str
-  query: str
-
 
 _TEMPLATE_DETAILED = """You are a biomedical expert. Answer the QUERY using CONTEXT as your primary source.
 
@@ -62,7 +53,9 @@ class GenerationChain:
     )
     self.temperature = temperature
     if answer_style:
-      self._generation_template = _TEMPLATE_CONCISE.replace('{answer_style}', answer_style)
+      self._generation_template = _TEMPLATE_CONCISE.replace(
+        '{answer_style}', answer_style
+      )
     else:
       self._generation_template = _TEMPLATE_DETAILED
     self.llms = llms or {
